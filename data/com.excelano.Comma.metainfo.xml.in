@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.excelano.Comma</id>
+
+  <name>Comma</name>
+  <summary>Edit delimited text files</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      Comma is a small editor for CSV, TSV, and other delimited text files. It
+      shows a file as a grid of values and saves it back as the same kind of
+      file it opened, leaving every row you did not edit byte for byte as it
+      was.
+    </p>
+    <p>
+      Values are treated as text and never reinterpreted, so leading zeros
+      survive, long identifiers stay whole, and dates are whatever the file
+      says they are.
+    </p>
+    <p>
+      Comma is not a spreadsheet. There are no formulas, no cell formatting,
+      and no second file format to save into.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.excelano.Comma.desktop</launchable>
+
+  <developer id="com.excelano">
+    <name>David M. Anderson</name>
+  </developer>
+
+  <url type="homepage">https://github.com/excelano/comma</url>
+  <url type="bugtracker">https://github.com/excelano/comma/issues</url>
+  <url type="vcs-browser">https://github.com/excelano/comma</url>
+
+  <content_rating type="oars-1.1"/>
+</component>

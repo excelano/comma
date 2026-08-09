@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Comma
+Comment=Edit delimited text files
+Exec=comma
+Icon=com.excelano.Comma
+Terminal=false
+Type=Application
+Categories=Office;Spreadsheet;GTK;
+Keywords=CSV;TSV;DSV;Delimited;Table;Data;
+StartupNotify=true

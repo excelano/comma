@@ -1,0 +1,17 @@
+[package]
+name = "comma"
+version = "0.1.0"
+edition = "2024"
+description = "Edit delimited text files"
+authors = ["David M. Anderson"]
+license = "MIT"
+repository = "https://github.com/excelano/comma"
+publish = false
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_18"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
+
+[profile.release]
+lto = "thin"

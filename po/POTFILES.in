@@ -1,0 +1,4 @@
+data/com.excelano.Comma.desktop.in
+data/com.excelano.Comma.metainfo.xml.in
+src/application.rs
+src/window.rs

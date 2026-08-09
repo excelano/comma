@@ -1,0 +1,34 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $CommaWindow: Adw.ApplicationWindow {
+  title: _("Comma");
+
+  content: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      MenuButton {
+        primary: true;
+        icon-name: "open-menu-symbolic";
+        tooltip-text: _("Main Menu");
+        menu-model: primary_menu;
+      }
+    }
+
+    content: Adw.StatusPage {
+      icon-name: "com.excelano.Comma-symbolic";
+      title: _("No File Open");
+      description: _("Comma edits CSV, TSV, and other delimited text files.");
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_About Comma");
+      action: "app.about";
+    }
+  }
+}
