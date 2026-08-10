@@ -195,6 +195,27 @@ pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report
     item.set_focusable(false);
     item.set_child(Some(&cell));
 
+    // A value too long for its column is cut off with an ellipsis, and this is
+    // how to read the rest of it without opening the cell. Asked at the moment
+    // of hovering rather than settled when the cell is filled, because whether
+    // a value fits is not known until the column has been given its width — and
+    // it changes again every time that width is dragged.
+    cell.set_has_tooltip(true);
+    cell.connect_query_tooltip(|cell, _, _, _, tooltip| {
+        let imp = cell.imp();
+        // Nothing is cut off in a cell that is open for typing, and the value
+        // being shown there is the entry's rather than the label's.
+        if imp.stack.visible_child_name().as_deref() != Some(DISPLAY) {
+            return false;
+        }
+        if !imp.label.layout().is_ellipsized() {
+            return false;
+        }
+
+        tooltip.set_text(Some(&imp.label.text()));
+        true
+    });
+
     // A double click opens a cell. A single one only says where you are, which
     // is what focusing the table's cell does.
     let clicks = gtk::GestureClick::new();
