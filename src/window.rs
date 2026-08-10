@@ -187,6 +187,10 @@ mod imp {
         /// outlives the focus that set it, so that reaching for a menu does not
         /// count as pointing somewhere else.
         pub current: Cell<Option<Cursor>>,
+        /// Which column the grid was sorted by before the sorter last changed,
+        /// which is the only way to tell a heading clicked a third time from
+        /// one clicked for the first.
+        pub previous_sort: Cell<Option<(usize, gtk::SortType)>>,
         /// The menus the right button opens, each made the first time it is
         /// asked for and then moved to wherever it is asked for next. A cell
         /// offers both halves; a row number offers only the rows.
@@ -213,6 +217,7 @@ mod imp {
                 needle: RefCell::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
+                previous_sort: Cell::default(),
                 cell_menu: OnceCell::default(),
                 row_menu: OnceCell::default(),
                 settings: gio::Settings::new(APP_ID),
@@ -255,12 +260,13 @@ mod imp {
                 .set_model(Some(&gtk::NoSelection::new(Some(self.sorted.clone()))));
 
             // Which column the grid is sorted by decides whether there is an
-            // order worth writing to the file.
+            // order worth writing to the file, and whether a row can be put
+            // above another one at all.
             if let Some(sorter) = self.column_view.sorter() {
                 sorter.connect_changed(glib::clone!(
                     #[weak]
                     window,
-                    move |_, _| window.show_state()
+                    move |_, _| window.sorting_changed()
                 ));
             }
 

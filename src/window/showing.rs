@@ -155,6 +155,32 @@ impl CommaWindow {
             .collect()
     }
 
+    /// A heading is clicked three times to get back to where it started: up,
+    /// down, and the file's own order again. GTK gives the first two and then
+    /// goes round, so the third is here.
+    ///
+    /// Coming back to ascending on a column that was descending is what a third
+    /// click looks like from the outside: GTK has no signal that says a heading
+    /// was pressed, only one that says the sorting is now different.
+    pub(super) fn sorting_changed(&self) {
+        let imp = self.imp();
+        let now = self.sorted_by();
+        let before = imp.previous_sort.replace(now);
+
+        if let (Some((column, gtk::SortType::Ascending)), Some((same, gtk::SortType::Descending))) =
+            (now, before)
+            && column == same
+        {
+            // Clearing it changes the sorting again, and the state that is
+            // shown is shown on the way back through here.
+            imp.column_view
+                .sort_by_column(None::<&gtk::ColumnViewColumn>, gtk::SortType::Ascending);
+            return;
+        }
+
+        self.show_state();
+    }
+
     /// Whether the grid is showing the file the way the file is: every row, in
     /// the order the file holds them. A sort and a search each make it show
     /// something else, and the operations that name a place next to a row have
