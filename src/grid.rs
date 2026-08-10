@@ -19,7 +19,7 @@ mod number;
 mod order;
 mod row;
 
-pub use cell::Cell;
+pub use cell::{Cell, LINE_BREAK};
 pub use letters::column_letter;
 pub use model::RowModel;
 pub use row::Row;

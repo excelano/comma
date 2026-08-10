@@ -15,6 +15,7 @@
 use adw::prelude::*;
 use gettextrs::gettext;
 
+use crate::grid::LINE_BREAK;
 use crate::translatable;
 use crate::window::{CommaWindow, key_for_move};
 
@@ -24,6 +25,9 @@ enum Key {
     Accel(&'static str),
     /// The key that asks the table for one of its moves.
     Move(&'static str),
+    /// An accelerator a widget answers to itself, rather than one bound to an
+    /// action or to a move.
+    Handled(&'static str),
 }
 
 /// What the list says, in the order it says it. The descriptions are written
@@ -42,6 +46,10 @@ const GROUPS: [(&str, &[(&str, Key)]); 3] = [
         translatable("Editing"),
         &[
             (translatable("Edit the Cell"), Key::Move("edit")),
+            (
+                translatable("Insert a Line Break"),
+                Key::Handled(LINE_BREAK[0]),
+            ),
             (translatable("Undo"), Key::Accel("win.undo")),
             (translatable("Redo"), Key::Accel("win.redo")),
             (translatable("Find and Replace"), Key::Accel("win.find")),
@@ -106,6 +114,7 @@ fn accelerator(window: &CommaWindow, key: &Key) -> Option<String> {
             application.accels_for_action(action).first()?.to_string()
         }
         Key::Move(how) => key_for_move(how)?.to_string(),
+        Key::Handled(accelerator) => accelerator.to_string(),
     };
 
     let (key, modifiers) = gtk::accelerator_parse(&bound)?;

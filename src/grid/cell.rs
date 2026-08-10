@@ -1,13 +1,20 @@
 // A cell you can type in.
 //
-// The cell shows a label and swaps in an entry for as long as it is being
+// The cell shows a label and swaps in an editor for as long as it is being
 // edited. The two live in a stack so that the widget the view binds a row to
 // never changes and the one not in use asks for no room; a box asked to fit both
 // in a cell's width gives one of them nothing and stops drawing it.
 //
+// The editor is a text view rather than an entry because a field of a delimited
+// file is allowed to hold a line break — quoted, and Comma reads and writes them
+// — and an entry is one line by construction. So Enter is not what an entry does
+// with it: Enter finishes the edit, and Alt or Ctrl with it puts a line break in,
+// which is what the two spreadsheets people arrive from do between them.
+//
 // GtkEditableLabel is this same stack and would be much less code. It is not
 // used because its label cannot be told to ellipsize, so a single long value
-// would stretch its column and the table would change shape as you scrolled.
+// would stretch its column and the table would change shape as you scrolled —
+// and it, too, is one line only.
 //
 // It is a widget of its own rather than a bare stack because it has to know
 // where it is. Which row and column a cell holds is the answer to what the
@@ -41,6 +48,28 @@ pub(super) type Report = dyn Fn(Edited);
 const DISPLAY: &str = "display";
 const EDIT: &str = "edit";
 
+/// The keys that put a line break into a value instead of finishing the edit.
+///
+/// Excel does it with Alt and LibreOffice with Ctrl, so Comma answers to both
+/// and whichever one is in your hands is the right one. The first is the one
+/// the list of shortcuts shows.
+pub const LINE_BREAK: [&str; 2] = ["<alt>Return", "<primary>Return"];
+
+/// Whether a press of Enter was asking for a line break rather than for the end
+/// of the edit. The keypad's Enter is the same key as the other one here, as it
+/// is everywhere else in Comma.
+fn breaks_a_line(pressed: gdk::Key, state: gdk::ModifierType) -> bool {
+    let pressed = match pressed {
+        gdk::Key::KP_Enter | gdk::Key::ISO_Enter => gdk::Key::Return,
+        other => other,
+    };
+
+    LINE_BREAK
+        .iter()
+        .filter_map(|accelerator| gtk::accelerator_parse(*accelerator))
+        .any(|(key, modifiers)| key == pressed && state.contains(modifiers))
+}
+
 mod imp {
     use super::*;
 
@@ -48,7 +77,11 @@ mod imp {
     pub struct Cell {
         pub stack: gtk::Stack,
         pub label: gtk::Label,
-        pub entry: gtk::Text,
+        pub entry: gtk::TextView,
+        /// What lets the editor be scrolled sideways to the end of a long value
+        /// without being allowed to drag its column wider. A text view does not
+        /// scroll itself.
+        pub scroller: gtk::ScrolledWindow,
         /// Which record of the file this cell is showing, and which field of it.
         pub row: Value<usize>,
         pub column: Value<usize>,
@@ -79,10 +112,26 @@ mod imp {
             // and the column stops honouring its width.
             self.label.set_max_width_chars(1);
 
-            self.entry.set_hexpand(true);
-            // The same reason as the label's: an entry sized to what it holds
+            // Lines are the value's own, never the width's: a cell being edited
+            // is exactly as tall as the same cell was to look at, so opening one
+            // does not move the rest of the table.
+            self.entry.set_wrap_mode(gtk::WrapMode::None);
+            // Tab belongs to the table, as it does everywhere else in it.
+            self.entry.set_accepts_tab(false);
+
+            // No scrollbars: the view follows the caret to the end of a long
+            // value, which is what an entry does, and a bar inside a table cell
+            // would be a thing to look at in every row.
+            self.scroller
+                .set_policy(gtk::PolicyType::External, gtk::PolicyType::External);
+            // As tall as what it holds, so the row grows a line at a time with
+            // the value rather than being some height of its own choosing.
+            self.scroller.set_propagate_natural_height(true);
+            self.scroller.set_hexpand(true);
+            // The same reason as the label's: an editor sized to what it holds
             // would drag its column wider the moment an edit started.
-            self.entry.set_width_chars(1);
+            self.scroller.set_size_request(1, -1);
+            self.scroller.set_child(Some(&self.entry));
 
             // The stack takes the size of whichever child it is showing rather
             // than the larger of the two, so a cell that is not being edited is
@@ -90,7 +139,7 @@ mod imp {
             self.stack.set_hhomogeneous(false);
             self.stack.set_vhomogeneous(false);
             self.stack.add_named(&self.label, Some(DISPLAY));
-            self.stack.add_named(&self.entry, Some(EDIT));
+            self.stack.add_named(&self.scroller, Some(EDIT));
             self.stack.set_parent(&*self.obj());
             self.obj().add_css_class("cell-content");
         }
@@ -128,7 +177,7 @@ impl Cell {
         self.imp().position.get()
     }
 
-    /// Opens the cell for typing. This is all an edit is: the entry showing
+    /// Opens the cell for typing. This is all an edit is: the editor showing
     /// instead of the label, carrying what the label said. A cell already open
     /// stays open.
     pub fn begin(&self) {
@@ -137,9 +186,53 @@ impl Cell {
         }
 
         let imp = self.imp();
-        imp.entry.set_text(&imp.label.text());
+        let buffer = imp.entry.buffer();
+        buffer.set_text(&imp.label.text());
+        // At the end of what is there, which is where an entry puts it and
+        // where you would carry on typing from.
+        buffer.place_cursor(&buffer.end_iter());
+
         imp.stack.set_visible_child_name(EDIT);
         imp.entry.grab_focus();
+        self.fit_to_lines();
+
+        // Putting the caret somewhere does not go and look at it, and a view
+        // that has not been given its size yet cannot look anywhere. So this
+        // waits a frame: a long value would otherwise open showing its
+        // beginning with the caret off the side, which is not where an entry
+        // leaves you.
+        imp.entry.add_tick_callback(|entry, _| {
+            let insert = entry.buffer().get_insert();
+            entry.scroll_to_mark(&insert, 0.0, false, 0.0, 0.0);
+            glib::ControlFlow::Break
+        });
+    }
+
+    /// Makes the editor as tall as the lines it holds, and the row with it.
+    ///
+    /// A text view is a thing meant to be scrolled, so it asks for one line's
+    /// worth however much it holds — that is what a scrolled window around it is
+    /// normally for. Here the cell is the scrolling, sideways only, and the
+    /// height has to come from somewhere else. It is counted rather than
+    /// measured: the view's own layout has nothing in it to measure until the
+    /// view has been drawn, and this is wanted before that. Nothing here wraps,
+    /// so the number of lines is the number of line breaks and does not depend
+    /// on the width.
+    fn fit_to_lines(&self) {
+        let imp = self.imp();
+        let metrics = imp.entry.pango_context().metrics(None, None);
+        let line = (metrics.ascent() + metrics.descent()) / pango::SCALE;
+        let lines = imp.entry.buffer().line_count().max(1);
+        let margins = imp.entry.top_margin() + imp.entry.bottom_margin();
+
+        imp.scroller.set_min_content_height(line * lines + margins);
+    }
+
+    /// What is in the editor at this moment.
+    fn typed(&self) -> String {
+        let buffer = self.imp().entry.buffer();
+        let (start, end) = buffer.bounds();
+        buffer.text(&start, &end, false).to_string()
     }
 
     fn editing(&self) -> bool {
@@ -157,7 +250,7 @@ impl Cell {
         }
 
         let imp = self.imp();
-        let value = imp.entry.text().to_string();
+        let value = self.typed();
         imp.label.set_text(&value);
         imp.stack.set_visible_child_name(DISPLAY);
         // The focus comes back to the cell of the table rather than to the entry
@@ -255,12 +348,13 @@ pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report
     cell.add_controller(menu);
 
     let entry = cell.imp().entry.clone();
-    entry.connect_activate(glib::clone!(
+
+    // Adding a line makes the cell taller as it is typed, rather than at the
+    // moment the edit ends.
+    entry.buffer().connect_changed(glib::clone!(
         #[weak]
         cell,
-        #[strong]
-        report,
-        move |_| cell.finish(&report, true)
+        move |_| cell.fit_to_lines()
     ));
 
     let leaving = gtk::EventControllerFocus::new();
@@ -273,25 +367,41 @@ pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report
     ));
     entry.add_controller(leaving);
 
-    let cancel = gtk::EventControllerKey::new();
-    cancel.connect_key_pressed(glib::clone!(
+    // The keys an open cell answers to itself. Before the text view's own, which
+    // would otherwise take Enter for a line break — the thing it is for
+    // everywhere else and the one thing it cannot mean here, because Enter is
+    // how an edit is finished and how a column is filled downwards.
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    keys.connect_key_pressed(glib::clone!(
         #[weak]
         cell,
         #[strong]
         report,
         #[upgrade_or]
         glib::Propagation::Proceed,
-        move |_, key, _, _| {
-            if key != gdk::Key::Escape {
-                return glib::Propagation::Proceed;
+        move |_, key, _, state| {
+            match key {
+                gdk::Key::Escape => {
+                    // Put back what the document holds and end the edit on it,
+                    // so that cancelling is not a second way out: it commits a
+                    // value that is not a change.
+                    let imp = cell.imp();
+                    imp.entry.buffer().set_text(&imp.label.text());
+                    cell.finish(&report, false);
+                }
+                gdk::Key::Return | gdk::Key::KP_Enter | gdk::Key::ISO_Enter => {
+                    match breaks_a_line(key, state) {
+                        true => cell.imp().entry.buffer().insert_at_cursor("\n"),
+                        false => cell.finish(&report, true),
+                    }
+                }
+                _ => return glib::Propagation::Proceed,
             }
-            let imp = cell.imp();
-            imp.entry.set_text(&imp.label.text());
-            cell.finish(&report, false);
             glib::Propagation::Stop
         }
     ));
-    entry.add_controller(cancel);
+    entry.add_controller(keys);
 }
 
 /// Shows the value this cell's row holds in this cell's column, and says what it

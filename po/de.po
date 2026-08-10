@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 10:47-0500\n"
+"POT-Creation-Date: 2026-08-10 13:09-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -65,7 +65,7 @@ msgstr ""
 msgid "David M. Anderson"
 msgstr "David M. Anderson"
 
-#: src/grid/cell.rs:302
+#: src/grid/cell.rs:433
 msgid "Empty"
 msgstr "Leer"
 
@@ -73,7 +73,7 @@ msgstr "Leer"
 msgid "_Open"
 msgstr "Ö_ffnen"
 
-#: src/gtk/window.blp:19 src/shortcuts.rs:35
+#: src/gtk/window.blp:19 src/shortcuts.rs:39
 msgid "Open a File"
 msgstr "Eine Datei öffnen"
 
@@ -89,7 +89,7 @@ msgstr "Diese Datei speichern"
 msgid "Main Menu"
 msgstr "Hauptmenü"
 
-#: src/gtk/window.blp:40 src/shortcuts.rs:47
+#: src/gtk/window.blp:40 src/shortcuts.rs:55
 msgid "Find and Replace"
 msgstr "Suchen und Ersetzen"
 
@@ -125,103 +125,107 @@ msgstr "Datei ö_ffnen …"
 msgid "Page {of}"
 msgstr "Seite {of}"
 
-#: src/shortcuts.rs:33
+#: src/shortcuts.rs:37
 msgid "File"
 msgstr "Datei"
 
-#: src/shortcuts.rs:36
+#: src/shortcuts.rs:40
 msgid "Save"
 msgstr "Speichern"
 
-#: src/shortcuts.rs:37
+#: src/shortcuts.rs:41
 msgid "Save As"
 msgstr "Speichern unter"
 
-#: src/shortcuts.rs:38
+#: src/shortcuts.rs:42
 msgid "Quit"
 msgstr "Beenden"
 
-#: src/shortcuts.rs:42
+#: src/shortcuts.rs:46
 msgid "Editing"
 msgstr "Bearbeiten"
 
-#: src/shortcuts.rs:44
+#: src/shortcuts.rs:48
 msgid "Edit the Cell"
 msgstr "Zelle bearbeiten"
 
-#: src/shortcuts.rs:45
+#: src/shortcuts.rs:50
+msgid "Insert a Line Break"
+msgstr "Zeilenumbruch einfügen"
+
+#: src/shortcuts.rs:53
 msgid "Undo"
 msgstr "Rückgängig"
 
-#: src/shortcuts.rs:46
+#: src/shortcuts.rs:54
 msgid "Redo"
 msgstr "Wiederholen"
 
-#: src/shortcuts.rs:51
+#: src/shortcuts.rs:59
 msgid "Moving Around the Table"
 msgstr "Bewegen in der Tabelle"
 
-#: src/shortcuts.rs:53
+#: src/shortcuts.rs:61
 msgid "One Cell Up"
 msgstr "Eine Zelle nach oben"
 
-#: src/shortcuts.rs:54
+#: src/shortcuts.rs:62
 msgid "One Cell Down"
 msgstr "Eine Zelle nach unten"
 
-#: src/shortcuts.rs:55
+#: src/shortcuts.rs:63
 msgid "One Cell Left"
 msgstr "Eine Zelle nach links"
 
-#: src/shortcuts.rs:56
+#: src/shortcuts.rs:64
 msgid "One Cell Right"
 msgstr "Eine Zelle nach rechts"
 
-#: src/shortcuts.rs:57
+#: src/shortcuts.rs:65
 msgid "Start of the Row"
 msgstr "Anfang der Zeile"
 
-#: src/shortcuts.rs:58
+#: src/shortcuts.rs:66
 msgid "End of the Row"
 msgstr "Ende der Zeile"
 
-#: src/shortcuts.rs:59
+#: src/shortcuts.rs:67
 msgid "Start of the File"
 msgstr "Anfang der Datei"
 
-#: src/shortcuts.rs:60
+#: src/shortcuts.rs:68
 msgid "End of the File"
 msgstr "Ende der Datei"
 
-#: src/shortcuts.rs:94
+#: src/shortcuts.rs:102
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: src/window.rs:72
+#: src/window.rs:84
 msgid "Insert Row Above"
 msgstr "Zeile darüber einfügen"
 
-#: src/window.rs:79
+#: src/window.rs:92
 msgid "Insert Row Below"
 msgstr "Zeile darunter einfügen"
 
-#: src/window.rs:88
+#: src/window.rs:102
 msgid "Delete Row"
 msgstr "Zeile löschen"
 
-#: src/window.rs:95
+#: src/window.rs:110
 msgid "Insert Column Before"
 msgstr "Spalte davor einfügen"
 
-#: src/window.rs:102
+#: src/window.rs:118
 msgid "Insert Column After"
 msgstr "Spalte danach einfügen"
 
-#: src/window.rs:109
+#: src/window.rs:126
 msgid "Delete Column"
 msgstr "Spalte löschen"
 
-#: src/window.rs:757
+#: src/window.rs:789
 msgid "_Close"
 msgstr "S_chließen"
 

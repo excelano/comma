@@ -236,10 +236,11 @@ impl CommaWindow {
     }
 
     /// Whether a cell is open for typing, in which case the keys that move
-    /// around the table are the entry's: Home and End move the caret through
-    /// what is being typed rather than moving to another cell.
+    /// around the table are the editor's: Home and End move the caret through
+    /// what is being typed, and on a value with a line break in it the arrows
+    /// move between its lines, rather than any of them moving to another cell.
     fn typing(&self) -> bool {
-        gtk::prelude::RootExt::focus(self).is_some_and(|widget| widget.is::<gtk::Text>())
+        gtk::prelude::RootExt::focus(self).is_some_and(|widget| widget.is::<gtk::TextView>())
     }
 
     /// Puts the cursor, and the keyboard with it, on one cell of the table.
