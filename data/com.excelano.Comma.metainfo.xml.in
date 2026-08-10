@@ -39,6 +39,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.1" date="2026-08-10">
+      <description>
+        <p>
+          Files open quickly. A cell now builds its editor when you type in
+          it rather than when the grid is drawn, so a file of four thousand
+          rows opens in a moment rather than in a couple of seconds, and a
+          wide file gains the most.
+        </p>
+        <p>
+          Inserting or deleting a row redraws that row rather than the whole
+          grid, so the table stays where you had scrolled it to.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-08-10">
       <description>
         <p>
