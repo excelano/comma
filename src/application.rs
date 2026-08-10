@@ -97,11 +97,16 @@ impl CommaApplication {
         self.set_accels_for_action("win.save", &["<primary>s"]);
         self.set_accels_for_action("win.save-as", &["<primary><shift>s"]);
         self.set_accels_for_action("win.find", &["<primary>f"]);
-        // Both, because reaching "?" needs Shift on most layouts and the key that
-        // arrives then carries it.
+        // Both forms, because reaching "?" needs Shift on most layouts and the
+        // key that arrives then carries it. Neither fires on every desktop, so
+        // the menu item is the way in that always works.
         self.set_accels_for_action(
             "win.shortcuts",
-            &["<primary>question", "<primary><shift>question"],
+            &[
+                "<primary>question",
+                "<primary><shift>question",
+                "<primary><shift>slash",
+            ],
         );
         self.set_accels_for_action("win.undo", &["<primary>z"]);
         self.set_accels_for_action("win.redo", &["<primary><shift>z", "<primary>y"]);
