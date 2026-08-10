@@ -3,11 +3,12 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
+use gtk::gdk;
 use gtk::gio;
 use gtk::glib;
 
@@ -19,6 +20,7 @@ use crate::application::CommaApplication;
 use crate::config::APP_ID;
 use crate::grid::{self, Edited, Row, RowModel};
 use crate::pdf;
+use crate::shortcuts;
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
 /// about a delimiter — its menu entry, its button label, the state the action
@@ -71,6 +73,15 @@ const MOVES: [(&str, &str); 11] = [
     ("edit", "KP_Enter"),
     ("edit", "F2"),
 ];
+
+/// Which key asks the table for a move, for anything that wants to say so
+/// without spelling it out a second time.
+pub fn key_for_move(how: &str) -> Option<&'static str> {
+    MOVES
+        .iter()
+        .find(|(name, _)| *name == how)
+        .map(|(_, key)| *key)
+}
 
 /// What Comma can write that it will not read back. Each is output: never
 /// reopened, never offered as Save, and never the document.
@@ -178,6 +189,9 @@ mod imp {
         /// outlives the focus that set it, so that reaching for a menu does not
         /// count as pointing somewhere else.
         pub current: Cell<Option<Cursor>>,
+        /// The menu the right button opens, made the first time it is asked for
+        /// and then moved to wherever it is asked for next.
+        pub cell_menu: OnceCell<gtk::PopoverMenu>,
         pub settings: gio::Settings,
     }
 
@@ -197,6 +211,7 @@ mod imp {
                 needle: RefCell::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
+                cell_menu: OnceCell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -356,6 +371,21 @@ impl CommaWindow {
             })
             .build();
 
+        let cell_menu = gio::ActionEntry::builder("cell-menu")
+            .parameter_type(Some(
+                glib::VariantTy::new("(dd)").expect("a pair of numbers"),
+            ))
+            .activate(|window: &Self, _, param| {
+                if let Some((x, y)) = param.and_then(|at| at.get::<(f64, f64)>()) {
+                    window.show_cell_menu(x, y);
+                }
+            })
+            .build();
+
+        let keyboard = gio::ActionEntry::builder("shortcuts")
+            .activate(|window: &Self, _, _| shortcuts::present(window))
+            .build();
+
         let commit_order = gio::ActionEntry::builder("commit-order")
             .activate(|window: &Self, _, _| window.commit_order())
             .build();
@@ -395,6 +425,8 @@ impl CommaWindow {
             find,
             replace_all,
             move_cursor,
+            cell_menu,
+            keyboard,
             export_pdf,
             export_html,
             export_ods,
@@ -957,6 +989,10 @@ impl CommaWindow {
     fn move_cursor(&self, how: &str) {
         let imp = self.imp();
         let Some(cursor) = imp.current.get() else {
+            // Nothing is current yet — the table has the keyboard but no cell
+            // of it does — so the first thing asked for is only to be
+            // somewhere, and the beginning is where that is.
+            self.go_to(0, 0);
             return;
         };
         if how == "edit" {
@@ -983,6 +1019,12 @@ impl CommaWindow {
             _ => return,
         };
 
+        self.go_to(position, column);
+    }
+
+    /// Puts the cursor, and the keyboard with it, on one cell of the table.
+    fn go_to(&self, position: u32, column: usize) {
+        let imp = self.imp();
         let Some(target) = imp
             .column_view
             .columns()
@@ -991,6 +1033,7 @@ impl CommaWindow {
         else {
             return;
         };
+
         // The cursor moves whether or not the keyboard can follow it there yet,
         // so that moving twice in a row lands where two moves should.
         if let Some(row) = imp
@@ -1020,6 +1063,42 @@ impl CommaWindow {
             ));
         }
         self.show_reach();
+    }
+
+    /// Puts the row and column operations under the pointer, which is where a
+    /// table is usually asked about them.
+    ///
+    /// The menu is the same one the main menu holds, built once and moved to
+    /// wherever it was asked for.
+    fn show_cell_menu(&self, x: f64, y: f64) {
+        let imp = self.imp();
+        let Some(cell) = self.focused_cell() else {
+            return;
+        };
+
+        let menu = imp.cell_menu.get_or_init(|| {
+            let menu = gtk::PopoverMenu::from_model(Some(&structure_menu()));
+            menu.set_has_arrow(false);
+            menu.set_halign(gtk::Align::Start);
+            menu.set_parent(&*imp.column_view);
+            menu
+        });
+
+        // The click came in the cell's own coordinates, and the menu hangs off
+        // the table.
+        let Some(at) = cell.compute_point(
+            &*imp.column_view,
+            &gtk::graphene::Point::new(x as f32, y as f32),
+        ) else {
+            return;
+        };
+        menu.set_pointing_to(Some(&gdk::Rectangle::new(
+            at.x() as i32,
+            at.y() as i32,
+            1,
+            1,
+        )));
+        menu.popup();
     }
 
     /// Opens the cell the keyboard is on for typing.
@@ -1327,6 +1406,37 @@ fn preset_label(id: &str) -> String {
         "unit-separator" => gettext("ASCII Separators"),
         other => other.to_string(),
     }
+}
+
+/// The row and column operations, for the menu that appears where the pointer
+/// is. The same items the main menu lists, because they are the same operations.
+fn structure_menu() -> gio::Menu {
+    let rows = gio::Menu::new();
+    rows.append(
+        Some(&gettext("Insert Row Above")),
+        Some("win.insert-row-above"),
+    );
+    rows.append(
+        Some(&gettext("Insert Row Below")),
+        Some("win.insert-row-below"),
+    );
+    rows.append(Some(&gettext("Delete Row")), Some("win.delete-row"));
+
+    let columns = gio::Menu::new();
+    columns.append(
+        Some(&gettext("Insert Column Before")),
+        Some("win.insert-column-before"),
+    );
+    columns.append(
+        Some(&gettext("Insert Column After")),
+        Some("win.insert-column-after"),
+    );
+    columns.append(Some(&gettext("Delete Column")), Some("win.delete-column"));
+
+    let menu = gio::Menu::new();
+    menu.append_section(None, &rows);
+    menu.append_section(None, &columns);
+    menu
 }
 
 /// How the file is being read: which delimiter, and whether its first record is

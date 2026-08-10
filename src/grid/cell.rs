@@ -209,6 +209,24 @@ pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report
     ));
     cell.add_controller(clicks);
 
+    // The other button asks what can be done here, which first means saying
+    // where here is.
+    let menu = gtk::GestureClick::new();
+    menu.set_button(gdk::BUTTON_SECONDARY);
+    menu.connect_pressed(glib::clone!(
+        #[weak]
+        cell,
+        move |gesture, _, x, y| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            if let Some(item) = cell.parent() {
+                item.grab_focus();
+            }
+            cell.activate_action("win.cell-menu", Some(&(x, y).to_variant()))
+                .unwrap_or_default();
+        }
+    ));
+    cell.add_controller(menu);
+
     let entry = cell.imp().entry.clone();
     entry.connect_activate(glib::clone!(
         #[weak]

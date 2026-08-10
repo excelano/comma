@@ -97,6 +97,7 @@ impl CommaApplication {
         self.set_accels_for_action("win.save", &["<primary>s"]);
         self.set_accels_for_action("win.save-as", &["<primary><shift>s"]);
         self.set_accels_for_action("win.find", &["<primary>f"]);
+        self.set_accels_for_action("win.shortcuts", &["<primary>question"]);
         self.set_accels_for_action("win.undo", &["<primary>z"]);
         self.set_accels_for_action("win.redo", &["<primary><shift>z", "<primary>y"]);
     }
