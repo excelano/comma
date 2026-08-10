@@ -6,3 +6,5 @@ src/gtk/window.blp
 src/pdf.rs
 src/shortcuts.rs
 src/window.rs
+src/window/files.rs
+src/window/menus.rs

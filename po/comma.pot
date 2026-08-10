@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 00:25-0500\n"
+"POT-Creation-Date: 2026-08-10 10:17-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,7 +56,7 @@ msgstr ""
 msgid "David M. Anderson"
 msgstr ""
 
-#: src/grid/cell.rs:296
+#: src/grid/cell.rs:300
 msgid "Empty"
 msgstr ""
 
@@ -68,7 +68,7 @@ msgstr ""
 msgid "Open a File"
 msgstr ""
 
-#: src/gtk/window.blp:24 src/gtk/window.blp:202 src/window.rs:1246
+#: src/gtk/window.blp:24 src/gtk/window.blp:202 src/window/files.rs:196
 msgid "_Save"
 msgstr ""
 
@@ -120,27 +120,27 @@ msgstr ""
 msgid "_Redo"
 msgstr ""
 
-#: src/gtk/window.blp:135 src/window.rs:1423
+#: src/gtk/window.blp:135 src/window/menus.rs:115
 msgid "Insert Row Above"
 msgstr ""
 
-#: src/gtk/window.blp:140 src/window.rs:1427
+#: src/gtk/window.blp:140 src/window/menus.rs:119
 msgid "Insert Row Below"
 msgstr ""
 
-#: src/gtk/window.blp:145 src/window.rs:1430
+#: src/gtk/window.blp:145 src/window/menus.rs:122
 msgid "Delete Row"
 msgstr ""
 
-#: src/gtk/window.blp:152 src/window.rs:1434
+#: src/gtk/window.blp:152 src/window/menus.rs:126
 msgid "Insert Column Before"
 msgstr ""
 
-#: src/gtk/window.blp:157 src/window.rs:1438
+#: src/gtk/window.blp:157 src/window/menus.rs:130
 msgid "Insert Column After"
 msgstr ""
 
-#: src/gtk/window.blp:162 src/window.rs:1441
+#: src/gtk/window.blp:162 src/window/menus.rs:133
 msgid "Delete Column"
 msgstr ""
 
@@ -256,107 +256,107 @@ msgstr ""
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:106
-msgid "PDF Document"
-msgstr ""
-
-#: src/window.rs:107
-msgid "Web Page"
-msgstr ""
-
-#: src/window.rs:108
-msgid "OpenDocument Spreadsheet"
-msgstr ""
-
-#: src/window.rs:598
-msgid "Open File"
-msgstr ""
-
-#: src/window.rs:613 src/window.rs:623 src/window.rs:632
-msgid "Could Not Open the File"
-msgstr ""
-
-#: src/window.rs:825
-msgid "Export"
-msgstr ""
-
-#: src/window.rs:848 src/window.rs:855
-msgid "Could Not Export the File"
-msgstr ""
-
-#: src/window.rs:879
-msgid "A PDF can only be written to a folder on this computer."
-msgstr ""
-
-#: src/window.rs:1185 src/window.rs:1220
-msgid "Could Not Save the File"
-msgstr ""
-
-#: src/window.rs:1198
-msgid "Save File"
-msgstr ""
-
-#: src/window.rs:1241
-msgid "“{}” has unsaved changes. Changes that are not saved will be lost."
-msgstr ""
-
-#: src/window.rs:1243
-msgid "Save Changes?"
-msgstr ""
-
-#: src/window.rs:1244
-msgid "_Cancel"
-msgstr ""
-
-#: src/window.rs:1245
-msgid "_Discard"
-msgstr ""
-
-#: src/window.rs:1342 src/window.rs:1471
-msgid "Untitled"
-msgstr ""
-
-#: src/window.rs:1348
+#: src/window.rs:625
 msgid "_Close"
 msgstr ""
 
-#: src/window.rs:1371
+#: src/window/files.rs:44
+msgid "PDF Document"
+msgstr ""
+
+#: src/window/files.rs:45
+msgid "Web Page"
+msgstr ""
+
+#: src/window/files.rs:46
+msgid "OpenDocument Spreadsheet"
+msgstr ""
+
+#: src/window/files.rs:58
+msgid "Open File"
+msgstr ""
+
+#: src/window/files.rs:73 src/window/files.rs:83 src/window/files.rs:92
+msgid "Could Not Open the File"
+msgstr ""
+
+#: src/window/files.rs:135 src/window/files.rs:170
+msgid "Could Not Save the File"
+msgstr ""
+
+#: src/window/files.rs:148
+msgid "Save File"
+msgstr ""
+
+#: src/window/files.rs:191
+msgid "“{}” has unsaved changes. Changes that are not saved will be lost."
+msgstr ""
+
+#: src/window/files.rs:193
+msgid "Save Changes?"
+msgstr ""
+
+#: src/window/files.rs:194
+msgid "_Cancel"
+msgstr ""
+
+#: src/window/files.rs:195
+msgid "_Discard"
+msgstr ""
+
+#: src/window/files.rs:222
+msgid "Export"
+msgstr ""
+
+#: src/window/files.rs:245 src/window/files.rs:252
+msgid "Could Not Export the File"
+msgstr ""
+
+#: src/window/files.rs:276
+msgid "A PDF can only be written to a folder on this computer."
+msgstr ""
+
+#: src/window/files.rs:307 src/window/files.rs:348
+msgid "Untitled"
+msgstr ""
+
+#: src/window/files.rs:330
 msgid "Delimited Text"
 msgstr ""
 
-#: src/window.rs:1377
+#: src/window/files.rs:336
 msgid "All Files"
 msgstr ""
 
-#: src/window.rs:1409
+#: src/window/menus.rs:101
 msgctxt "delimiter"
 msgid "Comma"
 msgstr ""
 
-#: src/window.rs:1410
+#: src/window/menus.rs:102
 msgctxt "delimiter"
 msgid "Tab"
 msgstr ""
 
-#: src/window.rs:1411
+#: src/window/menus.rs:103
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr ""
 
-#: src/window.rs:1412
+#: src/window/menus.rs:104
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr ""
 
-#: src/window.rs:1413
+#: src/window/menus.rs:105
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr ""
 
-#: src/window.rs:1460
+#: src/window/menus.rs:152
 msgid "First Row Is a Header"
 msgstr ""
 
-#: src/window.rs:1463
+#: src/window/menus.rs:155
 msgid "Delimiter"
 msgstr ""
