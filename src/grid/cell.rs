@@ -208,27 +208,33 @@ impl Cell {
         });
     }
 
+    /// How tall this cell is for a value: one line's height for each line of it.
+    ///
+    /// Counted a line at a time rather than laid out all at once, because that
+    /// is how the text view does it. Three lines laid out together come to one
+    /// pixel less than three lines measured one by one, and that pixel is room
+    /// for the editor to scroll in — which is a shift every time the caret
+    /// crosses between lines.
+    ///
+    /// Both the label and the editor are given this same answer, so the two are
+    /// the same height by construction rather than by luck, and a cell does not
+    /// change size at the moment it opens.
+    pub(super) fn height_for(&self, value: &str) -> i32 {
+        let (_, line) = self.imp().label.create_pango_layout(Some("X")).pixel_size();
+        line * value.split('\n').count() as i32
+    }
+
     /// Makes the editor as tall as the lines it holds, and the row with it.
     ///
     /// A text view is a thing meant to be scrolled, so it asks for one line's
     /// worth however much it holds — that is what a scrolled window around it is
-    /// normally for. Here the cell is the scrolling, sideways only, and the
-    /// height has to come from somewhere else.
-    ///
-    /// It comes from laying the text out and asking how tall that came to, which
-    /// is what the label does with the same text and the same font. Counting
-    /// lines and multiplying by the font's ascent and descent is two pixels
-    /// short of it over three lines, and two pixels is a whole cell's worth of
-    /// shift at the moment an edit begins.
+    /// normally for. Here the cell is the scrolling, sideways only, so the
+    /// height has to be handed to it.
     fn fit_to_lines(&self) {
         let imp = self.imp();
-        let (_, height) = imp
-            .entry
-            .create_pango_layout(Some(&self.typed()))
-            .pixel_size();
         let margins = imp.entry.top_margin() + imp.entry.bottom_margin();
-
-        imp.scroller.set_min_content_height(height + margins);
+        imp.scroller
+            .set_min_content_height(self.height_for(&self.typed()) + margins);
     }
 
     /// What is in the editor at this moment.
@@ -420,6 +426,9 @@ pub(super) fn bind(item: &gtk::ColumnViewCell, column: usize, title: &str) {
     let imp = cell.imp();
     let value = row.value(column);
     imp.label.set_text(&value);
+    // The same height the editor will ask for, so that opening this cell does
+    // not move the table around it.
+    imp.label.set_size_request(-1, cell.height_for(&value));
     imp.row.set(row.index());
     imp.column.set(column);
     imp.position.set(item.position());
