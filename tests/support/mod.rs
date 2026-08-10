@@ -24,8 +24,10 @@ pub fn read(name: &str) -> Vec<u8> {
 /// The dialect each corpus file is written in.
 pub fn dialect(name: &str) -> Dialect {
     match name {
-        "semicolon.csv" => Dialect::semicolon(),
+        "semicolon.csv" | "european.csv" => Dialect::semicolon(),
         "tabs.tsv" => Dialect::tab(),
+        "pipe.csv" => Dialect::pipe(),
+        "ascii-separated.dsv" => Dialect::unit_separator(),
         _ => Dialect::comma(),
     }
 }

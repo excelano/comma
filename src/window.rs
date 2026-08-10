@@ -3,17 +3,30 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
+use std::cell::RefCell;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::gio;
 use gtk::glib;
 
-use comma::document::{Dialect, Document};
+use comma::document::{Dialect, Document, sniff};
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
 use crate::grid::{self, RowModel};
+
+/// The delimiters Comma offers, in the order the menu lists them. Everything
+/// about a delimiter — its menu entry, its button label, the state the action
+/// carries — comes from here, so there is one place to add another.
+const PRESETS: [(&str, Dialect); 5] = [
+    ("comma", Dialect::comma()),
+    ("tab", Dialect::tab()),
+    ("semicolon", Dialect::semicolon()),
+    ("pipe", Dialect::pipe()),
+    ("unit-separator", Dialect::unit_separator()),
+];
 
 mod imp {
     use super::*;
@@ -27,7 +40,12 @@ mod imp {
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub column_view: TemplateChild<gtk::ColumnView>,
+        #[template_child]
+        pub dialect_button: TemplateChild<gtk::MenuButton>,
         pub rows: RowModel,
+        /// The file as it was read. Kept so that choosing a different delimiter
+        /// re-reads the same bytes rather than the file as it is now.
+        pub bytes: RefCell<Vec<u8>>,
         pub settings: gio::Settings,
     }
 
@@ -37,7 +55,9 @@ mod imp {
                 window_title: TemplateChild::default(),
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
+                dialect_button: TemplateChild::default(),
                 rows: RowModel::default(),
+                bytes: RefCell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -70,6 +90,8 @@ mod imp {
             // that acts on a selected row, and a highlight would promise one.
             self.column_view
                 .set_model(Some(&gtk::NoSelection::new(Some(self.rows.clone()))));
+
+            self.dialect_button.set_menu_model(Some(&reading_menu()));
         }
     }
 
@@ -107,7 +129,40 @@ impl CommaWindow {
         let open = gio::ActionEntry::builder("open")
             .activate(|window: &Self, _, _| window.choose_file())
             .build();
-        self.add_action_entries([open]);
+
+        let delimiter = gio::ActionEntry::builder("delimiter")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .state(PRESETS[0].0.to_variant())
+            .change_state(|window: &Self, action, state| {
+                let Some(state) = state else { return };
+                action.set_state(state);
+
+                if let Some(dialect) = state.str().and_then(preset) {
+                    window.read_again_as(dialect);
+                }
+            })
+            .build();
+
+        let header = gio::ActionEntry::builder("header")
+            .state(false.to_variant())
+            .change_state(|window: &Self, action, state| {
+                let Some(state) = state else { return };
+                action.set_state(state);
+
+                if let Some(header) = state.get::<bool>() {
+                    window.imp().rows.set_header(header);
+                    window.rebuild_columns();
+                }
+            })
+            .build();
+
+        self.add_action_entries([open, delimiter, header]);
+    }
+
+    fn set_action_state(&self, name: &str, state: &glib::Variant) {
+        if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+            action.set_state(state);
+        }
     }
 
     fn choose_file(&self) {
@@ -137,25 +192,91 @@ impl CommaWindow {
             Err(error) => return self.report_failure(&error.to_string()),
         };
 
-        match Document::from_bytes(&bytes, dialect_for(file)) {
-            Ok(document) => {
-                self.show(document);
-                self.show_file_name(file);
-            }
-            Err(error) => self.report_failure(&error.to_string()),
+        // Nothing on screen changes until the file has been read, so a file
+        // that will not open leaves the one that did alone.
+        let document = match Document::from_bytes(&bytes, sniff(&bytes)) {
+            Ok(document) => document,
+            Err(error) => return self.report_failure(&error.to_string()),
+        };
+
+        // A new file carries no opinions over from the last one. Its first row
+        // is data until this file's own user says otherwise.
+        self.imp().rows.set_header(false);
+        self.set_action_state("header", &false.to_variant());
+
+        self.imp().bytes.replace(bytes.to_vec());
+        self.show(document);
+        self.show_file_name(file);
+    }
+
+    /// Reads the file again under a different delimiter. The bytes have already
+    /// been read once, so the only thing that can differ is where the fields
+    /// are.
+    fn read_again_as(&self, dialect: Dialect) {
+        let imp = self.imp();
+        if imp.rows.document().is_none_or(|document| {
+            let current = document.borrow().dialect();
+            current == dialect
+        }) {
+            return;
         }
+
+        let document = Document::from_bytes(&imp.bytes.borrow(), dialect)
+            .expect("these bytes were read once already");
+        self.show(document);
     }
 
     fn show(&self, document: Document) {
         let imp = self.imp();
 
-        grid::set_columns(
-            &imp.column_view,
-            document.column_count(),
-            document.row_count(),
-        );
         imp.rows.set_document(document);
+        self.rebuild_columns();
+        self.show_dialect();
+
+        imp.dialect_button.set_visible(true);
         imp.stack.set_visible_child_name("grid");
+    }
+
+    /// Names the columns: the header record if there is one, otherwise the
+    /// spreadsheet letters. A header cell that is blank names nothing, so its
+    /// column keeps its letter.
+    fn rebuild_columns(&self) {
+        let imp = self.imp();
+        let Some(document) = imp.rows.document() else {
+            return;
+        };
+        let document = document.borrow();
+
+        let header = imp.rows.header() && document.row_count() > 0;
+        let titles: Vec<String> = (0..document.column_count())
+            .map(|column| {
+                let title = if header {
+                    document.value(0, column)
+                } else {
+                    ""
+                };
+                if title.is_empty() {
+                    grid::column_letter(column)
+                } else {
+                    title.to_owned()
+                }
+            })
+            .collect();
+
+        grid::set_columns(&imp.column_view, &titles, document.row_count());
+    }
+
+    /// Puts the delimiter in front of the user rather than leaving it guessed
+    /// at silently: on the button, and as the item ticked in its menu.
+    fn show_dialect(&self) {
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+        let dialect = document.borrow().dialect();
+        let id = preset_id(dialect).expect("every dialect Comma reads with is one of its presets");
+
+        self.imp().dialect_button.set_label(&preset_label(id));
+        self.set_action_state("delimiter", &id.to_variant());
     }
 
     fn show_file_name(&self, file: &gio::File) {
@@ -192,19 +313,48 @@ fn file_filters() -> gio::ListStore {
     filters
 }
 
-/// Slice 3 sniffs the file itself. Until it does, the name is the only evidence
-/// available, and it is right often enough to be worth reading.
-fn dialect_for(file: &gio::File) -> Dialect {
-    let name = file.basename().unwrap_or_default();
-    let extension = name
-        .extension()
-        .map(|extension| extension.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
+fn preset(id: &str) -> Option<Dialect> {
+    PRESETS
+        .iter()
+        .find(|(name, _)| *name == id)
+        .map(|(_, dialect)| *dialect)
+}
 
-    match extension.as_str() {
-        "tsv" | "tab" => Dialect::tab(),
-        _ => Dialect::comma(),
+fn preset_id(dialect: Dialect) -> Option<&'static str> {
+    PRESETS
+        .iter()
+        .find(|(_, candidate)| *candidate == dialect)
+        .map(|(id, _)| *id)
+}
+
+fn preset_label(id: &str) -> String {
+    match id {
+        "comma" => gettext("Comma"),
+        "tab" => gettext("Tab"),
+        "semicolon" => gettext("Semicolon"),
+        "pipe" => gettext("Pipe"),
+        "unit-separator" => gettext("ASCII Separators"),
+        other => other.to_string(),
     }
+}
+
+/// How the file is being read: which delimiter, and whether its first record is
+/// data or column titles.
+fn reading_menu() -> gio::Menu {
+    let delimiters = gio::Menu::new();
+    for (id, _) in PRESETS {
+        let item = gio::MenuItem::new(Some(&preset_label(id)), None);
+        item.set_action_and_target_value(Some("win.delimiter"), Some(&id.to_variant()));
+        delimiters.append_item(&item);
+    }
+
+    let records = gio::Menu::new();
+    records.append(Some(&gettext("First Row Is a Header")), Some("win.header"));
+
+    let menu = gio::Menu::new();
+    menu.append_section(Some(&gettext("Delimiter")), &delimiters);
+    menu.append_section(None, &records);
+    menu
 }
 
 fn display_name(file: &gio::File) -> String {

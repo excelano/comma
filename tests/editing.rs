@@ -176,7 +176,10 @@ fn every_corpus_file_survives_an_edit_and_a_reload() {
         "text-preservation.csv",
         "odd-quoting.csv",
         "semicolon.csv",
+        "european.csv",
         "tabs.tsv",
+        "pipe.csv",
+        "ascii-separated.dsv",
         "whitespace.csv",
         "german.csv",
     ] {

@@ -8,12 +8,9 @@ use super::dialect::Dialect;
 /// A value has to be quoted when writing it plainly would create a field
 /// boundary or a record boundary that is not there in the value itself.
 pub(super) fn needs_quoting(value: &str, dialect: Dialect) -> bool {
-    value.bytes().any(|byte| {
-        byte == dialect.delimiter_byte()
-            || byte == dialect.quote_byte()
-            || byte == b'\n'
-            || byte == b'\r'
-    })
+    value
+        .bytes()
+        .any(|byte| byte == dialect.quote_byte() || dialect.is_boundary(byte))
 }
 
 /// Appends the canonical bytes for `value` to `out`.

@@ -163,3 +163,30 @@ fn a_file_that_is_not_utf8_is_refused_rather_than_guessed_at() {
     let error = Document::from_bytes(b"a,b\n1,\xff\n", Dialect::comma()).unwrap_err();
     assert_eq!(error, LoadError::NotUtf8 { valid_up_to: 6 });
 }
+
+#[test]
+fn ascii_separators_end_records_and_line_breaks_do_not() {
+    let document = load("ascii-separated.dsv");
+
+    assert_eq!(document.row_count(), 3);
+    assert_eq!(document.column_count(), 3);
+    // The point of the ASCII separators: a field holds a line break with no
+    // quoting, because the record boundary is a character text cannot contain.
+    assert_eq!(document.value(1, 2), "a value with\na line break in it");
+    assert_eq!(document.value(2, 1), "Grace");
+}
+
+#[test]
+fn the_same_bytes_read_two_ways_give_two_different_tables() {
+    // What the delimiter picker is for. Neither reading is a parse failure;
+    // they are different answers to a question the file does not settle.
+    let bytes = b"a;b,c\nd;e,f\n";
+
+    let as_semicolons = Document::from_bytes(bytes, Dialect::semicolon()).unwrap();
+    assert_eq!(as_semicolons.column_count(), 2);
+    assert_eq!(as_semicolons.value(0, 1), "b,c");
+
+    let as_commas = Document::from_bytes(bytes, Dialect::comma()).unwrap();
+    assert_eq!(as_commas.column_count(), 2);
+    assert_eq!(as_commas.value(0, 0), "a;b");
+}

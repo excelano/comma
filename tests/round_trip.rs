@@ -82,6 +82,21 @@ fn tab_delimited() {
 }
 
 #[test]
+fn pipe_delimited() {
+    assert_round_trips("pipe.csv");
+}
+
+#[test]
+fn ascii_separators_with_a_line_break_inside_a_field() {
+    assert_round_trips("ascii-separated.dsv");
+}
+
+#[test]
+fn decimal_commas_inside_a_semicolon_file() {
+    assert_round_trips("european.csv");
+}
+
+#[test]
 fn surrounding_whitespace_is_data() {
     assert_round_trips("whitespace.csv");
 }

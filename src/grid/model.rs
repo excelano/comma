@@ -3,7 +3,7 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::gio;
@@ -21,6 +21,23 @@ mod imp {
     #[derive(Default)]
     pub struct RowModel {
         pub document: RefCell<Option<Rc<RefCell<Document>>>>,
+        /// Whether the first record of the file is its column titles rather
+        /// than data. The document does not know or care; this is a view of it.
+        pub header: Cell<bool>,
+    }
+
+    impl RowModel {
+        /// The document row the first row of the grid comes from.
+        pub fn first_row(&self) -> usize {
+            usize::from(self.header.get())
+        }
+
+        pub fn rows(&self) -> usize {
+            match self.document.borrow().as_ref() {
+                Some(document) => document.borrow().row_count(),
+                None => 0,
+            }
+        }
     }
 
     #[glib::object_subclass]
@@ -38,19 +55,16 @@ mod imp {
         }
 
         fn n_items(&self) -> u32 {
-            match self.document.borrow().as_ref() {
-                Some(document) => document.borrow().row_count() as u32,
-                None => 0,
-            }
+            self.rows().saturating_sub(self.first_row()) as u32
         }
 
         fn item(&self, position: u32) -> Option<glib::Object> {
             let document = self.document.borrow().clone()?;
-            let rows = document.borrow().row_count();
-            if position as usize >= rows {
+            let row = position as usize + self.first_row();
+            if row >= document.borrow().row_count() {
                 return None;
             }
-            Some(Row::new(document.clone(), position as usize).upcast())
+            Some(Row::new(document.clone(), row).upcast())
         }
     }
 }
@@ -68,13 +82,33 @@ impl Default for RowModel {
 impl RowModel {
     /// Puts a document behind the model, replacing whatever was there.
     pub fn set_document(&self, document: Document) {
-        let added = document.row_count() as u32;
         let removed = self.n_items();
 
         self.imp()
             .document
             .replace(Some(Rc::new(RefCell::new(document))));
 
-        self.items_changed(0, removed, added);
+        self.items_changed(0, removed, self.n_items());
+    }
+
+    pub fn document(&self) -> Option<Rc<RefCell<Document>>> {
+        self.imp().document.borrow().clone()
+    }
+
+    pub fn header(&self) -> bool {
+        self.imp().header.get()
+    }
+
+    /// Takes the first record out of the body, or puts it back. Nothing is
+    /// hidden that the file does not still hold: the row is a title now, and
+    /// the numbers on the remaining rows still say where in the file they are.
+    pub fn set_header(&self, header: bool) {
+        if self.header() == header {
+            return;
+        }
+
+        let removed = self.n_items();
+        self.imp().header.set(header);
+        self.items_changed(0, removed, self.n_items());
     }
 }

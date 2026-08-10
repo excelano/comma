@@ -16,6 +16,7 @@ mod letters;
 mod model;
 mod row;
 
+pub use letters::column_letter;
 pub use model::RowModel;
 pub use row::Row;
 
@@ -23,21 +24,19 @@ use gtk::glib;
 use gtk::pango;
 use gtk::prelude::*;
 
-use self::letters::column_letter;
-
 /// The width a data column gets before anyone drags it. Columns that size
 /// themselves to their contents would change width as you scroll and new rows
 /// are realised, which reads as the grid shifting under the pointer.
 const DEFAULT_COLUMN_WIDTH: i32 = 160;
 
-/// Rebuilds the view's columns for a document of this shape: a row-number
-/// gutter followed by `columns` lettered data columns.
-pub fn set_columns(column_view: &gtk::ColumnView, columns: usize, rows: usize) {
+/// Rebuilds the view's columns: a row-number gutter wide enough for `rows`,
+/// then one column per title.
+pub fn set_columns(column_view: &gtk::ColumnView, titles: &[String], rows: usize) {
     remove_all_columns(column_view);
     column_view.append_column(&gutter_column(rows));
 
-    for index in 0..columns {
-        column_view.append_column(&data_column(index));
+    for (index, title) in titles.iter().enumerate() {
+        column_view.append_column(&data_column(index, title));
     }
 }
 
@@ -76,7 +75,7 @@ fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
         .build()
 }
 
-fn data_column(index: usize) -> gtk::ColumnViewColumn {
+fn data_column(index: usize, title: &str) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
     factory.connect_setup(|_, cell| {
         let label = gtk::Label::builder()
@@ -97,7 +96,7 @@ fn data_column(index: usize) -> gtk::ColumnViewColumn {
     });
 
     gtk::ColumnViewColumn::builder()
-        .title(column_letter(index))
+        .title(title)
         .factory(&factory)
         .resizable(true)
         .fixed_width(DEFAULT_COLUMN_WIDTH)

@@ -26,6 +26,13 @@ template $CommaWindow: Adw.ApplicationWindow {
         tooltip-text: _("Main Menu");
         menu-model: primary_menu;
       }
+
+      [end]
+      MenuButton dialect_button {
+        visible: false;
+        always-show-arrow: true;
+        tooltip-text: _("How This File Is Read");
+      }
     }
 
     content: Stack stack {

@@ -32,6 +32,7 @@ enum FieldEnd {
     Delimiter,
     Lf,
     CrLf,
+    RecordSeparator,
     EndOfText,
 }
 
@@ -48,6 +49,7 @@ fn parse_record(text: &str, start: usize, dialect: Dialect) -> (Record, usize) {
             FieldEnd::Delimiter => continue,
             FieldEnd::Lf => RecordTerminator::Lf,
             FieldEnd::CrLf => RecordTerminator::CrLf,
+            FieldEnd::RecordSeparator => RecordTerminator::RecordSeparator,
             FieldEnd::EndOfText => RecordTerminator::Absent,
         };
 
@@ -70,7 +72,7 @@ fn parse_field(text: &str, start: usize, dialect: Dialect) -> (Field, usize, Fie
     // closing quote are data like any other.
     loop {
         let run_start = position;
-        while position < bytes.len() && !is_boundary(bytes[position], dialect) {
+        while position < bytes.len() && !dialect.is_boundary(bytes[position]) {
             position += 1;
         }
         value.push_str(&text[run_start..position]);
@@ -79,6 +81,10 @@ fn parse_field(text: &str, start: usize, dialect: Dialect) -> (Field, usize, Fie
             None => {
                 let field = finish(text, start, position, value, dialect);
                 return (field, position, FieldEnd::EndOfText);
+            }
+            Some(&byte) if byte == dialect.delimiter_byte() => {
+                let field = finish(text, start, position, value, dialect);
+                return (field, position + 1, FieldEnd::Delimiter);
             }
             Some(b'\n') => {
                 let field = finish(text, start, position, value, dialect);
@@ -93,11 +99,11 @@ fn parse_field(text: &str, start: usize, dialect: Dialect) -> (Field, usize, Fie
                 value.push('\r');
                 position += 1;
             }
-            // is_boundary stops on the delimiter, a line feed, or a carriage
-            // return, and the three cases above have taken the latter two.
+            // The delimiter and the line endings are taken above, so the only
+            // boundary left is the record separator.
             Some(_) => {
                 let field = finish(text, start, position, value, dialect);
-                return (field, position + 1, FieldEnd::Delimiter);
+                return (field, position + 1, FieldEnd::RecordSeparator);
             }
         }
     }
@@ -130,10 +136,6 @@ fn read_quoted(text: &str, start: usize, dialect: Dialect, value: &mut String) -
             return position + 1;
         }
     }
-}
-
-fn is_boundary(byte: u8, dialect: Dialect) -> bool {
-    byte == dialect.delimiter_byte() || byte == b'\n' || byte == b'\r'
 }
 
 fn finish(text: &str, start: usize, end: usize, value: String, dialect: Dialect) -> Field {

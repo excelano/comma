@@ -20,8 +20,10 @@
 mod dialect;
 mod parse;
 mod serialize;
+mod sniff;
 
 pub use dialect::{Dialect, DialectError};
+pub use sniff::sniff;
 
 use std::fmt;
 
@@ -63,7 +65,9 @@ struct Field {
 enum RecordTerminator {
     Lf,
     CrLf,
-    /// The last record of a file that does not end with a line break. Comma
+    /// The ASCII record separator, in files that use it instead of line breaks.
+    RecordSeparator,
+    /// The last record of a file that does not end with a terminator. Comma
     /// does not add one.
     Absent,
 }
@@ -133,6 +137,7 @@ impl Document {
             match record.terminator {
                 RecordTerminator::Lf => out.push('\n'),
                 RecordTerminator::CrLf => out.push_str("\r\n"),
+                RecordTerminator::RecordSeparator => out.push(dialect::RECORD_SEPARATOR as char),
                 RecordTerminator::Absent => {}
             }
         }
