@@ -13,14 +13,12 @@
 // Built with AI assistance (Claude, Anthropic)
 
 mod cell;
-mod letters;
 mod model;
 mod number;
 mod order;
 mod row;
 
 pub use cell::{Cell, LINE_BREAK};
-pub use letters::column_letter;
 pub use model::RowModel;
 pub use row::Row;
 
@@ -116,10 +114,17 @@ fn remove_all_columns(column_view: &gtk::ColumnView) {
     }
 }
 
-/// The row numbers. Sized to the widest number the file can show, so it does
-/// not grow as you scroll into four-digit territory.
+/// How many digits wide the row-number gutter has to be for a file of this many
+/// rows. Sized to the widest number the file can show, so it does not grow as
+/// you scroll into four-digit territory — which also means a file that crosses
+/// from 999 rows to 1000 needs its gutter built again.
+pub fn gutter_digits(rows: usize) -> i32 {
+    rows.to_string().len() as i32
+}
+
+/// The row numbers.
 fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
-    let digits = rows.to_string().len() as i32;
+    let digits = gutter_digits(rows);
 
     let factory = gtk::SignalListItemFactory::new();
     factory.connect_setup(move |_, item| {

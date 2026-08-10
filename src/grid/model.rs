@@ -114,6 +114,20 @@ impl RowModel {
         self.imp().header.get()
     }
 
+    /// Says that records were spliced: `gone` of them from `at`, replaced by
+    /// `come`. Everything below the splice keeps its widgets and the grid keeps
+    /// the place it was scrolled to, which is what tells a row being inserted
+    /// from the file being opened again.
+    ///
+    /// The caller has already settled that the splice does not reach the header
+    /// record and does not change how wide the row numbers are; those move more
+    /// of the grid than this can describe.
+    pub fn rows_changed(&self, at: usize, gone: usize, come: usize) {
+        let position = at.saturating_sub(self.imp().first_row()) as u32;
+        self.imp().reported.set(self.n_items());
+        self.items_changed(position, gone as u32, come as u32);
+    }
+
     /// Says that one record of the document now reads differently, so the view
     /// draws that row again and leaves the rest alone. A record the header
     /// toggle has taken out of the body is not a row here and is ignored.

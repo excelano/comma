@@ -275,7 +275,7 @@ impl Document {
     }
 
     /// Puts an empty record at `at`, which may be the end of the file.
-    pub fn insert_row(&mut self, at: usize) {
+    pub fn insert_row(&mut self, at: usize) -> Extent {
         // A record always holds at least one field: an empty line is a record
         // of one empty field rather than of none, which is what the parser
         // would make of the row this writes.
@@ -304,11 +304,11 @@ impl Document {
             (at, Vec::new(), vec![blank(self.terminator_at(at))])
         };
 
-        self.commit(Change::Rows { at, before, after });
+        self.commit(Change::Rows { at, before, after })
     }
 
     /// Takes one record out of the file.
-    pub fn delete_row(&mut self, at: usize) {
+    pub fn delete_row(&mut self, at: usize) -> Extent {
         // A file that ended without a terminator still should, so when the last
         // record goes, the one that becomes last takes that over.
         let displaces = at + 1 == self.records.len() && self.ends_without_terminator() && at > 0;
@@ -327,7 +327,7 @@ impl Document {
             (at, vec![self.records[at].clone()], Vec::new())
         };
 
-        self.commit(Change::Rows { at, before, after });
+        self.commit(Change::Rows { at, before, after })
     }
 
     /// Puts an empty field at `at` in every record that reaches that far.
@@ -337,7 +337,7 @@ impl Document {
     /// stops short of the column is left alone: it has no field there to push
     /// aside, and padding it out to reach would rewrite a line the user was not
     /// pointing at. Ragged files stay ragged.
-    pub fn insert_column(&mut self, at: usize) {
+    pub fn insert_column(&mut self, at: usize) -> Extent {
         let fields = self
             .rows_reaching(at, |length, at| length >= at)
             .map(|row| (row, Field::blank()))
@@ -347,11 +347,11 @@ impl Document {
             at,
             fields,
             inserted: true,
-        });
+        })
     }
 
     /// Takes the field at `at` out of every record that has one.
-    pub fn delete_column(&mut self, at: usize) {
+    pub fn delete_column(&mut self, at: usize) -> Extent {
         let fields = self
             .rows_reaching(at, |length, at| length > at)
             .map(|row| (row, self.records[row].fields[at].clone()))
@@ -361,7 +361,7 @@ impl Document {
             at,
             fields,
             inserted: false,
-        });
+        })
     }
 
     /// Puts the records in a new order, which names for each position the

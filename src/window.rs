@@ -57,8 +57,9 @@ struct Operation {
     name: &'static str,
     label: &'static str,
     axis: Axis,
-    /// Takes the row or the column, whichever the axis says.
-    change: fn(&mut Document, usize),
+    /// Takes the row or the column, whichever the axis says, and says how much
+    /// of the file it moved so the grid can redraw that much and no more.
+    change: fn(&mut Document, usize) -> Extent,
     /// Whether the row or column has to already exist for this to mean
     /// anything. Inserting a row is the one that does not: a file every row has
     /// been taken out of has none to point at, and would otherwise be a file no
@@ -191,6 +192,9 @@ mod imp {
         /// which is the only way to tell a heading clicked a third time from
         /// one clicked for the first.
         pub previous_sort: Cell<Option<(usize, gtk::SortType)>>,
+        /// How wide the row-number gutter was built to be, which a row coming or
+        /// going can outgrow.
+        pub gutter_digits: Cell<i32>,
         /// The menus the right button opens, each made the first time it is
         /// asked for and then moved to wherever it is asked for next. A cell
         /// offers both halves; a row number offers only the rows.
@@ -218,6 +222,7 @@ mod imp {
                 file: RefCell::default(),
                 current: Cell::default(),
                 previous_sort: Cell::default(),
+                gutter_digits: Cell::default(),
                 cell_menu: OnceCell::default(),
                 row_menu: OnceCell::default(),
                 settings: gio::Settings::new(APP_ID),
@@ -566,8 +571,47 @@ impl CommaWindow {
         imp.stack.set_visible_child_name("grid");
     }
 
-    /// Draws the grid again from the document, for changes that moved rows or
-    /// columns rather than only what one of them says.
+    /// Draws as much of the grid again as a change moved, and no more.
+    fn apply(&self, extent: Extent) {
+        match extent {
+            Extent::Record(row) => {
+                let imp = self.imp();
+                imp.rows.row_changed(row);
+                if imp.rows.header() && row == 0 {
+                    // That record is a set of column titles at the moment.
+                    self.rebuild_columns();
+                }
+                self.show_state();
+            }
+            Extent::Rows { at, gone, come } => self.reload_rows(at, gone, come),
+            Extent::Shape => self.reload(),
+        }
+    }
+
+    /// Redraws a splice of rows where it is, which keeps every row above it
+    /// drawn and the grid where it was scrolled to.
+    ///
+    /// Two things a row change can do reach further than the splice, and each
+    /// falls back to drawing the grid again: while the header is on, the first
+    /// record is the column titles, and the row numbers are as wide as the
+    /// largest of them.
+    fn reload_rows(&self, at: usize, gone: usize, come: usize) {
+        let imp = self.imp();
+        let Some(document) = imp.rows.document() else {
+            return;
+        };
+        let rows = document.borrow().row_count();
+
+        if (imp.rows.header() && at == 0) || grid::gutter_digits(rows) != imp.gutter_digits.get() {
+            return self.reload();
+        }
+
+        imp.rows.rows_changed(at, gone, come);
+        self.show_state();
+    }
+
+    /// Draws the whole grid again from the document, for changes that moved
+    /// columns or that moved rows too far to describe.
     fn reload(&self) {
         self.imp().rows.reload();
         self.rebuild_columns();
@@ -584,6 +628,10 @@ impl CommaWindow {
         };
         let document = document.borrow();
         let titles = self.column_titles(&document);
+        // What a later row change measures itself against to know whether the
+        // gutter it was built with is still wide enough.
+        imp.gutter_digits
+            .set(grid::gutter_digits(document.row_count()));
 
         // Rebuilding the columns throws away the sorters with them, and with
         // those the arrow saying which column the grid is sorted by.
@@ -633,7 +681,7 @@ impl CommaWindow {
                     ""
                 };
                 match title.is_empty() {
-                    true => grid::column_letter(column),
+                    true => xaddr::col_to_letter(column),
                     false => title.to_owned(),
                 }
             })
@@ -666,18 +714,7 @@ impl CommaWindow {
             return;
         };
 
-        match extent {
-            Extent::Record(row) => {
-                let imp = self.imp();
-                imp.rows.row_changed(row);
-                if imp.rows.header() && row == 0 {
-                    // That record is a set of column titles at the moment.
-                    self.rebuild_columns();
-                }
-                self.show_state();
-            }
-            Extent::Shape => self.reload(),
-        }
+        self.apply(extent);
     }
 
     /// Adds or removes a row or a column, at the one the menu named or at the
@@ -715,11 +752,11 @@ impl CommaWindow {
             return;
         }
 
-        // Read before the change, because rebuilding the grid moves the focus
+        // Read before the change, because redrawing the grid can move the focus
         // and the cursor follows the focus.
         let was = self.imp().current.get();
-        (operation.change)(&mut document.borrow_mut(), index);
-        self.reload();
+        let extent = (operation.change)(&mut document.borrow_mut(), index);
+        self.apply(extent);
         self.follow_change(was);
     }
 

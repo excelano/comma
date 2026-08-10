@@ -17,6 +17,10 @@ adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 pangocairo = "0.22.8"
+# The spreadsheet address grammar, shared with xled and xshape rather than
+# spelled out a fourth time. Comma uses the column letters from it today; what
+# it is really for is the day a selection is something a person can name.
+xaddr = "0.2"
 
 [profile.release]
 lto = "thin"

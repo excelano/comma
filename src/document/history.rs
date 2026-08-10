@@ -73,8 +73,11 @@ pub(super) struct Edit {
 pub enum Extent {
     /// One record reads differently and everything else is where it was.
     Record(usize),
-    /// Rows or columns came or went, so nothing can be assumed to be where it
-    /// was.
+    /// Records were spliced at `at`: `gone` of them taken out and `come` put in
+    /// their place. Every record after the splice is the record it was, so a
+    /// view redraws that stretch and keeps its place in the rest.
+    Rows { at: usize, gone: usize, come: usize },
+    /// Columns came or went, so nothing can be assumed to be where it was.
     Shape,
 }
 
@@ -107,7 +110,11 @@ impl Change {
                     (after, before)
                 };
                 records.splice(*at..*at + gone.len(), come.iter().cloned());
-                Extent::Shape
+                Extent::Rows {
+                    at: *at,
+                    gone: gone.len(),
+                    come: come.len(),
+                }
             }
             Self::Column {
                 at,

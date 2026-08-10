@@ -233,6 +233,57 @@ fn a_structural_change_is_one_thing_to_undo() {
 }
 
 #[test]
+fn a_row_change_says_which_rows_it_spliced() {
+    // What the grid redraws from. A row change that reported the whole file had
+    // moved would take the view back to the top of it, which is what opening a
+    // file does and not what inserting a row does.
+    let mut document = load("plain.csv");
+
+    assert_eq!(
+        document.insert_row(1),
+        Extent::Rows {
+            at: 1,
+            gone: 0,
+            come: 1
+        }
+    );
+    assert_eq!(
+        document.undo(),
+        Some(Extent::Rows {
+            at: 1,
+            gone: 1,
+            come: 0
+        }),
+        "taking an insertion back is the same splice read the other way"
+    );
+    assert_eq!(
+        document.delete_row(1),
+        Extent::Rows {
+            at: 1,
+            gone: 1,
+            come: 0
+        }
+    );
+}
+
+#[test]
+fn appending_to_a_file_with_no_final_newline_says_the_last_row_moved_too() {
+    // The record that was last gains a terminator, so two records read
+    // differently and a splice that named only the new one would leave the old
+    // last row drawn the way it was.
+    let mut document = load("no-trailing-newline.csv");
+
+    assert_eq!(
+        document.insert_row(document.row_count()),
+        Extent::Rows {
+            at: 1,
+            gone: 1,
+            come: 2
+        }
+    );
+}
+
+#[test]
 fn undo_says_a_cell_edit_moved_only_its_own_row() {
     let mut document = load("plain.csv");
     document.set_value(1, 1, "Lovelace");
@@ -280,8 +331,10 @@ fn every_corpus_file_survives_each_structural_change_and_its_undo() {
     }
 }
 
-/// Something done to a document, named so a failure says which one it was.
-type Change = (&'static str, fn(&mut Document));
+/// Something done to a document, named so a failure says which one it was. The
+/// extent each one reports is what the window redraws from, and is checked on
+/// its own; these tests are about what the change did to the file.
+type Change = (&'static str, fn(&mut Document) -> Extent);
 
 /// One of each kind of structural change, aimed at a position every corpus file
 /// has.
