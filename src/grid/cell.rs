@@ -213,19 +213,22 @@ impl Cell {
     /// A text view is a thing meant to be scrolled, so it asks for one line's
     /// worth however much it holds — that is what a scrolled window around it is
     /// normally for. Here the cell is the scrolling, sideways only, and the
-    /// height has to come from somewhere else. It is counted rather than
-    /// measured: the view's own layout has nothing in it to measure until the
-    /// view has been drawn, and this is wanted before that. Nothing here wraps,
-    /// so the number of lines is the number of line breaks and does not depend
-    /// on the width.
+    /// height has to come from somewhere else.
+    ///
+    /// It comes from laying the text out and asking how tall that came to, which
+    /// is what the label does with the same text and the same font. Counting
+    /// lines and multiplying by the font's ascent and descent is two pixels
+    /// short of it over three lines, and two pixels is a whole cell's worth of
+    /// shift at the moment an edit begins.
     fn fit_to_lines(&self) {
         let imp = self.imp();
-        let metrics = imp.entry.pango_context().metrics(None, None);
-        let line = (metrics.ascent() + metrics.descent()) / pango::SCALE;
-        let lines = imp.entry.buffer().line_count().max(1);
+        let (_, height) = imp
+            .entry
+            .create_pango_layout(Some(&self.typed()))
+            .pixel_size();
         let margins = imp.entry.top_margin() + imp.entry.bottom_margin();
 
-        imp.scroller.set_min_content_height(line * lines + margins);
+        imp.scroller.set_min_content_height(height + margins);
     }
 
     /// What is in the editor at this moment.
