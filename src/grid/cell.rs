@@ -160,9 +160,13 @@ impl Cell {
         let value = imp.entry.text().to_string();
         imp.label.set_text(&value);
         imp.stack.set_visible_child_name(DISPLAY);
-        // The edit was started from here, so this is where the focus comes back
-        // to — to the cell of the table rather than to the widget inside it.
-        if let Some(item) = self.parent() {
+        // The focus comes back to the cell of the table rather than to the entry
+        // inside it — but only when it is still in here at all. An edit ended by
+        // clicking somewhere else has already put the focus where it belongs,
+        // and taking it back would drag it off the cell just clicked on.
+        if imp.entry.has_focus()
+            && let Some(item) = self.parent()
+        {
             item.grab_focus();
         }
 
