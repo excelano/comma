@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The same mark at sixteen pixels, in one flat shape.
-
-     A symbolic icon is recoloured by whatever draws it, so it carries no colour
-     of its own and no gradient. There is no sheet behind it either: at this size
-     a border and a mark inside it become a grey smudge, and the comma alone
-     still reads.
-
-     Author: David M. Anderson
-     Built with AI assistance (Claude, Anthropic) -->
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- The same mark at sixteen pixels, in one flat shape.
+
+       A symbolic icon is recoloured by whatever draws it, so it carries no colour
+       of its own and no gradient. There is no sheet behind it either: at this size
+       a border and a mark inside it become a grey smudge, and the comma alone
+       still reads.
+
+       Author: David M. Anderson
+       Built with AI assistance (Claude, Anthropic) -->
   <path fill="#000000"
         d="M8 1.6c3.1 0 5.2 2.3 5.2 5.4 0 4.4-2.9 7.2-6.7 8.6l-1.4-2.4c2.3-1 3.7-2.4 4.2-4.1-0.2 0.2-0.7 0.3-1.4 0.3-2.8 0-4.9-2-4.9-4.8C3 3.9 5.1 1.6 8 1.6z"/>
 </svg>

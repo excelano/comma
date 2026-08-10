@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Comma's icon: a comma on a sheet.
-
-     The name was chosen because a comma can be drawn and a delimiter cannot, so
-     the mark is the whole of it. It sits low and large, with the tail well below
-     the middle of the tile, because that is what tells a comma from an
-     apostrophe at a glance — and Apostrophe is the app this one is a sibling to.
-
-     The artwork stays inside an eight pixel margin, as GNOME's app icons do, so
-     that the shell can round and shadow the tile without cutting into it.
-
-     Author: David M. Anderson
-     Built with AI assistance (Claude, Anthropic) -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Comma's icon: a comma on a sheet.
+
+       The name was chosen because a comma can be drawn and a delimiter cannot, so
+       the mark is the whole of it. It sits low and large, with the tail well below
+       the middle of the tile, because that is what tells a comma from an
+       apostrophe at a glance — and Apostrophe is the app this one is a sibling to.
+
+       The artwork stays inside an eight pixel margin, as GNOME's app icons do, so
+       that the shell can round and shadow the tile without cutting into it.
+
+       Author: David M. Anderson
+       Built with AI assistance (Claude, Anthropic) -->
   <defs>
     <linearGradient id="sheet" x1="64" y1="8" x2="64" y2="120" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ffffff"/>
