@@ -116,16 +116,25 @@ impl CommaWindow {
     /// that knows is the window: the cells are recycled underneath it.
     pub(super) fn watch_focus(&self) {
         self.connect_focus_widget_notify(|window| {
-            let Some(cell) = window.focused_cell() else {
+            let (Some(focused), Some(cell)) =
+                (gtk::prelude::RootExt::focus(window), window.focused_cell())
+            else {
                 return;
             };
+
             // Focus arriving from the toolbar lands on a whole row rather than
             // on any one cell of it, and a row lit up on its own says the row
             // is what the next thing will happen to, which is not true here.
             // So the row is passed straight through to a cell: the one the
             // cursor already names, rather than the first one to hand, so that
             // leaving the table and coming back brings you back where you were.
-            if !cell.has_focus() {
+            //
+            // Only from above, though. Focus goes *into* a cell as well — the
+            // entry it holds is where it is for as long as the cell is open for
+            // typing — and taking it back from there ends the edit at the
+            // moment it begins.
+            let on_the_cell = focused == *cell.upcast_ref::<gtk::Widget>();
+            if !on_the_cell && !focused.is_ancestor(&cell) {
                 match window.imp().current.get() {
                     Some(cursor) => window.go_to(cursor.position, cursor.column),
                     None => {
