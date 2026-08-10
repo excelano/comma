@@ -10,7 +10,7 @@ mod support;
 
 use support::{dialect, load, read, visible};
 
-use comma::document::{Dialect, Document};
+use comma::document::{Dialect, Document, Extent};
 
 /// The line numbers on which two files differ, counting a line as everything up
 /// to and including its terminator.
@@ -189,7 +189,11 @@ fn undo_puts_the_original_bytes_back() {
     document.set_value(1, 1, "changed");
     assert_ne!(visible(&document.to_bytes()), visible(&original));
 
-    assert_eq!(document.undo(), Some(1), "undo reports the row it restored");
+    assert_eq!(
+        document.undo(),
+        Some(Extent::Record(1)),
+        "undo reports the row it restored"
+    );
     assert_eq!(
         visible(&document.to_bytes()),
         visible(&original),
@@ -205,7 +209,7 @@ fn redo_puts_the_edit_back() {
     document.undo();
     assert_eq!(document.value(1, 1), "Ada");
 
-    assert_eq!(document.redo(), Some(1));
+    assert_eq!(document.redo(), Some(Extent::Record(1)));
     assert_eq!(document.value(1, 1), "Lovelace");
     assert!(!document.can_redo());
 }
@@ -219,8 +223,8 @@ fn undo_runs_out_at_the_file_it_started_from() {
     document.set_value(1, 1, "one");
     document.set_value(1, 1, "two");
 
-    assert_eq!(document.undo(), Some(1));
-    assert_eq!(document.undo(), Some(1));
+    assert_eq!(document.undo(), Some(Extent::Record(1)));
+    assert_eq!(document.undo(), Some(Extent::Record(1)));
     assert_eq!(document.undo(), None);
     assert_eq!(document.value(1, 1), "Ada");
 }

@@ -26,11 +26,10 @@ use gtk::glib;
 use gtk::pango;
 use gtk::prelude::*;
 
-use super::Row;
+use super::{Event, Row};
 
-/// What a finished edit is handed to: which row and column it was, and what the
-/// cell now says.
-pub(super) type Commit = dyn Fn(usize, usize, String);
+/// Where a cell's news goes: which row and column it came from, and what it is.
+pub(super) type Report = dyn Fn(usize, usize, Event);
 
 const DISPLAY: &str = "display";
 const EDIT: &str = "edit";
@@ -38,7 +37,7 @@ const EDIT: &str = "edit";
 /// Builds the contents of a fresh cell and connects every way an edit starts
 /// and ends. Cells are recycled as the view scrolls, so this runs once per
 /// widget rather than once per row.
-pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit>) {
+pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, report: Rc<Report>) {
     let label = gtk::Label::builder()
         .xalign(0.0)
         .hexpand(true)
@@ -72,11 +71,14 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
     cell.set_focusable(false);
     cell.set_child(Some(&content));
 
+    // One click says where you are, two say you want to change it. GTK gives a
+    // plain container no click-to-focus of its own.
     let start = gtk::GestureClick::new();
     start.connect_pressed(glib::clone!(
         #[weak]
         content,
         move |gesture, presses, _, _| {
+            content.grab_focus();
             if presses == 2 {
                 gesture.set_state(gtk::EventSequenceState::Claimed);
                 begin(&content);
@@ -84,6 +86,20 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
         }
     ));
     content.add_controller(start);
+
+    let arriving = gtk::EventControllerFocus::new();
+    arriving.connect_enter(glib::clone!(
+        #[weak]
+        cell,
+        #[strong]
+        report,
+        move |_| {
+            if let Some(row) = cell.item().and_downcast::<Row>() {
+                report(row.index(), column, Event::Focused);
+            }
+        }
+    ));
+    content.add_controller(arriving);
 
     let keys = gtk::EventControllerKey::new();
     keys.connect_key_pressed(glib::clone!(
@@ -105,8 +121,8 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
         #[weak]
         cell,
         #[strong]
-        commit,
-        move |_| finish(&cell, column, &commit)
+        report,
+        move |_| finish(&cell, column, &report)
     ));
 
     let leaving = gtk::EventControllerFocus::new();
@@ -114,8 +130,8 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
         #[weak]
         cell,
         #[strong]
-        commit,
-        move |_| finish(&cell, column, &commit)
+        report,
+        move |_| finish(&cell, column, &report)
     ));
     entry.add_controller(leaving);
 
@@ -124,7 +140,7 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
         #[weak]
         cell,
         #[strong]
-        commit,
+        report,
         #[upgrade_or]
         glib::Propagation::Proceed,
         move |_, key, _, _| {
@@ -133,7 +149,7 @@ pub(super) fn setup(cell: &gtk::ColumnViewCell, column: usize, commit: Rc<Commit
             }
             let (label, entry) = parts_of(&content_of(&cell));
             entry.set_text(&label.text());
-            finish(&cell, column, &commit);
+            finish(&cell, column, &report);
             glib::Propagation::Stop
         }
     ));
@@ -166,7 +182,7 @@ fn begin(content: &gtk::Stack) {
     entry.grab_focus();
 }
 
-fn finish(cell: &gtk::ColumnViewCell, column: usize, commit: &Rc<Commit>) {
+fn finish(cell: &gtk::ColumnViewCell, column: usize, report: &Rc<Report>) {
     let content = content_of(cell);
     if !editing(&content) {
         // The edit has already ended. Committing on Enter takes the focus away
@@ -182,7 +198,7 @@ fn finish(cell: &gtk::ColumnViewCell, column: usize, commit: &Rc<Commit>) {
     content.grab_focus();
 
     if let Some(row) = cell.item().and_downcast::<Row>() {
-        commit(row.index(), column, value);
+        report(row.index(), column, Event::Edited(value));
     }
 }
 

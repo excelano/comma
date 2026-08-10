@@ -8,9 +8,9 @@ Comma is a sibling to [Apostrophe](https://gitlab.gnome.org/World/apostrophe). B
 
 ## Status
 
-Early, and useful. Comma opens a file from the command line, the file manager, or its own dialog; guesses the delimiter, shows you which one it guessed, and lets you correct it in one click; and can be told that the first row is column titles rather than data. Cells are editable, edits can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
+Early, and useful. Comma opens a file from the command line, the file manager, or its own dialog; guesses the delimiter, shows you which one it guessed, and lets you correct it in one click; and can be told that the first row is column titles rather than data. Cells are editable, rows and columns can be inserted and deleted, everything can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
 
-Not written yet: inserting and deleting rows and columns, sorting, filtering, find and replace, and the PDF, HTML, and ODS exports. Keyboard navigation works but has not been gone over properly, the icon is a placeholder, and there are no translations yet.
+Not written yet: sorting, filtering, find and replace, and the PDF, HTML, and ODS exports. Keyboard navigation works but has not been gone over properly, there is no context menu, the icon is a placeholder, and there are no translations yet.
 
 ## Building
 

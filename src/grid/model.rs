@@ -24,6 +24,10 @@ mod imp {
         /// Whether the first record of the file is its column titles rather
         /// than data. The document does not know or care; this is a view of it.
         pub header: Cell<bool>,
+        /// How many rows the view was last told there were. A list model has to
+        /// say how many items came and went, and the document it reads has
+        /// already changed by the time it is asked.
+        pub reported: Cell<u32>,
     }
 
     impl RowModel {
@@ -82,12 +86,23 @@ impl Default for RowModel {
 impl RowModel {
     /// Puts a document behind the model, replacing whatever was there.
     pub fn set_document(&self, document: Document) {
-        let removed = self.n_items();
-
         self.imp()
             .document
             .replace(Some(Rc::new(RefCell::new(document))));
+        self.resync();
+    }
 
+    /// Says that the document has changed in ways the view cannot be told about
+    /// row by row, because rows or columns came or went.
+    pub fn reload(&self) {
+        self.resync();
+    }
+
+    /// Tells the view that every row it knows about is gone and these are the
+    /// rows there are now. Redrawing all of it is the honest answer when what
+    /// moved is which rows there are.
+    fn resync(&self) {
+        let removed = self.imp().reported.replace(self.n_items());
         self.items_changed(0, removed, self.n_items());
     }
 
@@ -119,8 +134,7 @@ impl RowModel {
             return;
         }
 
-        let removed = self.n_items();
         self.imp().header.set(header);
-        self.items_changed(0, removed, self.n_items());
+        self.resync();
     }
 }

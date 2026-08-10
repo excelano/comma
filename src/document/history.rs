@@ -1,17 +1,22 @@
 // The undo stack.
 //
-// A change is stored as the whole record before and after it, rather than the
-// one field that differed. A record is a handful of short strings and a change
-// is a person pressing Enter, so the wider snapshot costs nothing worth
-// counting, and it is what makes undo exact: setting a cell can also widen a
-// short record, and can drop the original spelling of a field that was written
-// in a way Comma would not choose for itself. Restoring the record restores all
-// of that together.
+// A change stores what it replaced alongside what it put there, so one entry
+// serves both directions and there is one description of what happened rather
+// than a forward one and a backward one that have to agree. Doing a change and
+// redoing it are the same code; undoing it is the same code read the other way.
+//
+// The three kinds differ only in what they keep. A cell edit keeps the record
+// it touched, because setting a cell can also widen a short record and always
+// drops the original spelling of the field it replaces. A row change keeps
+// whole records, because inserting one at the end of a file that has no
+// trailing terminator also changes the record that used to be last. A column
+// change keeps one field per record that had one, because a record too short to
+// reach the column is not touched at all.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use super::Field;
+use super::{Field, Record};
 
 #[derive(Debug, Clone)]
 pub(super) struct History {
@@ -25,14 +30,84 @@ pub(super) struct History {
 }
 
 #[derive(Debug, Clone)]
-struct Change {
-    row: usize,
-    before: Vec<Field>,
-    after: Vec<Field>,
+pub(super) enum Change {
+    /// One record's fields replaced by another set.
+    Fields {
+        row: usize,
+        before: Vec<Field>,
+        after: Vec<Field>,
+    },
+    /// Records from `at` replaced by other records. Inserting is an empty
+    /// `before` and deleting an empty `after`; a file whose last record ends
+    /// without a terminator is neither, because gaining or losing a record
+    /// after it changes how that record ends.
+    Rows {
+        at: usize,
+        before: Vec<Record>,
+        after: Vec<Record>,
+    },
+    /// A field in column `at` of each listed record, which the change either
+    /// put there or took away.
+    Column {
+        at: usize,
+        fields: Vec<(usize, Field)>,
+        inserted: bool,
+    },
 }
 
-/// What undoing or redoing produced: which record changed, and what it is now.
-pub(super) type Restored = (usize, Vec<Field>);
+/// How much of the file a change moved, which is as much as a view needs to
+/// know to draw it again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Extent {
+    /// One record reads differently and everything else is where it was.
+    Record(usize),
+    /// Rows or columns came or went, so nothing can be assumed to be where it
+    /// was.
+    Shape,
+}
+
+impl Change {
+    /// Applies this change, or takes it back. `records` must be in the state
+    /// this direction expects: the one before the change to apply it, the one
+    /// after to take it back.
+    fn apply(&self, records: &mut Vec<Record>, forward: bool) -> Extent {
+        match self {
+            Self::Fields { row, before, after } => {
+                records[*row].fields = if forward {
+                    after.clone()
+                } else {
+                    before.clone()
+                };
+                Extent::Record(*row)
+            }
+            Self::Rows { at, before, after } => {
+                let (gone, come) = if forward {
+                    (before, after)
+                } else {
+                    (after, before)
+                };
+                records.splice(*at..*at + gone.len(), come.iter().cloned());
+                Extent::Shape
+            }
+            Self::Column {
+                at,
+                fields,
+                inserted,
+            } => {
+                if *inserted == forward {
+                    for (row, field) in fields {
+                        records[*row].fields.insert(*at, field.clone());
+                    }
+                } else {
+                    for (row, _) in fields {
+                        records[*row].fields.remove(*at);
+                    }
+                }
+                Extent::Shape
+            }
+        }
+    }
+}
 
 impl History {
     /// The history of a document that has just been read, and so already agrees
@@ -45,7 +120,10 @@ impl History {
         }
     }
 
-    pub(super) fn record(&mut self, row: usize, before: Vec<Field>, after: Vec<Field>) {
+    /// Applies a change and remembers it.
+    pub(super) fn commit(&mut self, change: Change, records: &mut Vec<Record>) -> Extent {
+        let extent = change.apply(records, true);
+
         // Anything undone and not redone is gone: this change happens instead
         // of it rather than after it.
         self.changes.truncate(self.position);
@@ -55,8 +133,9 @@ impl History {
             self.saved = None;
         }
 
-        self.changes.push(Change { row, before, after });
+        self.changes.push(change);
         self.position += 1;
+        extent
     }
 
     pub(super) fn can_undo(&self) -> bool {
@@ -67,21 +146,20 @@ impl History {
         self.position < self.changes.len()
     }
 
-    pub(super) fn undo(&mut self) -> Option<Restored> {
+    pub(super) fn undo(&mut self, records: &mut Vec<Record>) -> Option<Extent> {
         if !self.can_undo() {
             return None;
         }
 
         self.position -= 1;
-        let change = &self.changes[self.position];
-        Some((change.row, change.before.clone()))
+        Some(self.changes[self.position].apply(records, false))
     }
 
-    pub(super) fn redo(&mut self) -> Option<Restored> {
+    pub(super) fn redo(&mut self, records: &mut Vec<Record>) -> Option<Extent> {
         let change = self.changes.get(self.position)?;
-        let restored = (change.row, change.after.clone());
+        let extent = change.apply(records, true);
         self.position += 1;
-        Some(restored)
+        Some(extent)
     }
 
     pub(super) fn is_modified(&self) -> bool {

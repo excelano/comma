@@ -3,7 +3,7 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -11,11 +11,11 @@ use gettextrs::gettext;
 use gtk::gio;
 use gtk::glib;
 
-use comma::document::{Dialect, Document, sniff};
+use comma::document::{Dialect, Document, Extent, sniff};
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
-use crate::grid::{self, RowModel};
+use crate::grid::{self, Event, RowModel};
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
 /// about a delimiter — its menu entry, its button label, the state the action
@@ -26,6 +26,51 @@ const PRESETS: [(&str, Dialect); 5] = [
     ("semicolon", Dialect::semicolon()),
     ("pipe", Dialect::pipe()),
     ("unit-separator", Dialect::unit_separator()),
+];
+
+/// Something done to the document at a row and a column.
+type Operation = fn(&mut Document, usize, usize);
+
+/// The operations that add or take away a row or a column, and whether each one
+/// needs a cell to already exist. They all happen at the cell the user last
+/// pointed at, which is why they all take the same two numbers.
+///
+/// Inserting a row is the one that does not need a cell. A file every row has
+/// been taken out of has none to point at, and would otherwise be a file no row
+/// could ever be put back into.
+const STRUCTURE: [(&str, Operation, bool); 6] = [
+    (
+        "insert-row-above",
+        |document, row, _| document.insert_row(row),
+        false,
+    ),
+    (
+        "insert-row-below",
+        // Below the last row is the end of the file, and below the row of a
+        // file with no rows is the same place.
+        |document, row, _| document.insert_row((row + 1).min(document.row_count())),
+        false,
+    ),
+    (
+        "delete-row",
+        |document, row, _| document.delete_row(row),
+        true,
+    ),
+    (
+        "insert-column-before",
+        |document, _, column| document.insert_column(column),
+        true,
+    ),
+    (
+        "insert-column-after",
+        |document, _, column| document.insert_column(column + 1),
+        true,
+    ),
+    (
+        "delete-column",
+        |document, _, column| document.delete_column(column),
+        true,
+    ),
 ];
 
 mod imp {
@@ -46,6 +91,11 @@ mod imp {
         /// The file the document was read from, and the one Save writes back
         /// to.
         pub file: RefCell<Option<gio::File>>,
+        /// The cell the user last put the keyboard on, as a row and a column of
+        /// the document. Rows and columns are added and removed here. It
+        /// outlives the focus that set it, so that reaching for a menu does not
+        /// count as pointing somewhere else.
+        pub current: Cell<Option<(usize, usize)>>,
         pub settings: gio::Settings,
     }
 
@@ -58,6 +108,7 @@ mod imp {
                 dialect_button: TemplateChild::default(),
                 rows: RowModel::default(),
                 file: RefCell::default(),
+                current: Cell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -186,9 +237,20 @@ impl CommaWindow {
             })
             .build();
 
-        self.add_action_entries([open, save, save_as, undo, redo, delimiter, header]);
+        let mut entries = vec![open, save, save_as, undo, redo, delimiter, header];
+        for (name, change, needs_cell) in STRUCTURE {
+            entries.push(
+                gio::ActionEntry::builder(name)
+                    .activate(move |window: &Self, _, _| window.change_shape(change, needs_cell))
+                    .build(),
+            );
+        }
+        self.add_action_entries(entries);
 
         // Everything but Open needs a document to work on.
+        for (name, _, _) in STRUCTURE {
+            self.set_action_enabled(name, false);
+        }
         for name in ["save", "save-as", "undo", "redo"] {
             self.set_action_enabled(name, false);
         }
@@ -254,6 +316,8 @@ impl CommaWindow {
         // is data until this file's own user says otherwise.
         self.imp().rows.set_header(false);
         self.set_action_state("header", &false.to_variant());
+        // Nor does it carry over where the last file was being worked on.
+        self.imp().current.set(None);
 
         self.imp().file.replace(Some(file.clone()));
         self.show(document);
@@ -334,35 +398,87 @@ impl CommaWindow {
             glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |row, column, value| window.commit_edit(row, column, value)
+                move |row, column, event| window.cell_said(row, column, event)
             ),
         );
     }
 
-    /// Takes what was typed into a cell. The document decides whether that is a
-    /// change at all: retyping a value leaves the file exactly as it was.
-    fn commit_edit(&self, row: usize, column: usize, value: String) {
-        let Some(document) = self.imp().rows.document() else {
-            return;
-        };
-        document.borrow_mut().set_value(row, column, value);
-        self.show_state();
+    fn cell_said(&self, row: usize, column: usize, event: Event) {
+        match event {
+            Event::Focused => {
+                self.imp().current.set(Some((row, column)));
+                self.show_reach();
+            }
+            // The document decides whether what was typed is a change at all:
+            // retyping a value leaves the file exactly as it was.
+            Event::Edited(value) => {
+                let Some(document) = self.imp().rows.document() else {
+                    return;
+                };
+                document.borrow_mut().set_value(row, column, value);
+                self.show_state();
+            }
+        }
     }
 
-    fn step_history(&self, step: fn(&mut Document) -> Option<usize>) {
+    /// Adds or removes a row or a column at the current cell.
+    fn change_shape(&self, change: Operation, needs_cell: bool) {
         let Some(document) = self.imp().rows.document() else {
             return;
         };
-        let Some(row) = step(&mut document.borrow_mut()) else {
+        let (row, column) = match (self.current_cell(), needs_cell) {
+            (Some(cell), _) => cell,
+            (None, true) => return,
+            // Nothing to point at, so the operation happens where the file
+            // begins.
+            (None, false) => (0, 0),
+        };
+
+        change(&mut document.borrow_mut(), row, column);
+        self.reload();
+    }
+
+    /// Where the next row or column goes, kept inside the document it refers
+    /// to: rows and columns the current cell outlived are no longer there.
+    fn current_cell(&self) -> Option<(usize, usize)> {
+        let document = self.imp().rows.document()?;
+        let (row, column) = self.imp().current.get()?;
+
+        let document = document.borrow();
+        let (rows, columns) = (document.row_count(), document.column_count());
+        if rows == 0 || columns == 0 {
+            return None;
+        }
+        Some((row.min(rows - 1), column.min(columns - 1)))
+    }
+
+    fn step_history(&self, step: fn(&mut Document) -> Option<Extent>) {
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+        let Some(extent) = step(&mut document.borrow_mut()) else {
             return;
         };
 
-        let imp = self.imp();
-        imp.rows.row_changed(row);
-        if imp.rows.header() && row == 0 {
-            // That record is a set of column titles at the moment, not a row.
-            self.rebuild_columns();
+        match extent {
+            Extent::Record(row) => {
+                let imp = self.imp();
+                imp.rows.row_changed(row);
+                if imp.rows.header() && row == 0 {
+                    // That record is a set of column titles at the moment.
+                    self.rebuild_columns();
+                }
+                self.show_state();
+            }
+            Extent::Shape => self.reload(),
         }
+    }
+
+    /// Draws the grid again from the document, for changes that moved rows or
+    /// columns rather than only what one of them says.
+    fn reload(&self) {
+        self.imp().rows.reload();
+        self.rebuild_columns();
         self.show_state();
     }
 
@@ -506,6 +622,17 @@ impl CommaWindow {
         self.set_action_enabled("save-as", self.imp().rows.document().is_some());
         self.set_action_enabled("undo", undo);
         self.set_action_enabled("redo", redo);
+
+        self.show_reach();
+    }
+
+    /// Which row and column operations have somewhere to happen.
+    fn show_reach(&self) {
+        let cell = self.current_cell().is_some();
+        let document = self.imp().rows.document().is_some();
+        for (name, _, needs_cell) in STRUCTURE {
+            self.set_action_enabled(name, if needs_cell { cell } else { document });
+        }
     }
 
     /// The bullet in front of the name is what Apostrophe does, and what Comma

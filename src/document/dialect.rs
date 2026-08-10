@@ -125,6 +125,13 @@ impl Dialect {
         self.quote
     }
 
+    /// Whether records end with the ASCII record separator rather than a line
+    /// break. What a new record should end with follows from this, for a file
+    /// that has no other record to take the answer from.
+    pub(super) fn uses_record_separator(&self) -> bool {
+        matches!(self.records, RecordStyle::RecordSeparator)
+    }
+
     /// Whether this byte ends a field or a record.
     ///
     /// One definition serves both directions: these are the characters the

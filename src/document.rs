@@ -24,11 +24,12 @@ mod serialize;
 mod sniff;
 
 pub use dialect::{Dialect, DialectError};
+pub use history::Extent;
 pub use sniff::sniff;
 
 use std::fmt;
 
-use history::History;
+use history::{Change, History};
 
 const BYTE_ORDER_MARK: &[u8] = &[0xEF, 0xBB, 0xBF];
 
@@ -60,6 +61,16 @@ struct Field {
     /// from what writing `value` would produce. `None` is the common case and
     /// costs no memory beyond the value itself.
     verbatim: Option<String>,
+}
+
+impl Field {
+    /// A field holding nothing, which is what a new one holds.
+    fn blank() -> Self {
+        Self {
+            value: String::new(),
+            verbatim: None,
+        }
+    }
 }
 
 /// How a record ended. Kept per record rather than per file, so a file with
@@ -198,38 +209,165 @@ impl Document {
             return;
         }
 
-        let record = &mut self.records[row];
-        let before = record.fields.clone();
-
-        while record.fields.len() <= column {
-            record.fields.push(Field {
-                value: String::new(),
-                verbatim: None,
-            });
+        let before = self.records[row].fields.clone();
+        let mut after = before.clone();
+        while after.len() <= column {
+            after.push(Field::blank());
         }
-
-        let field = &mut record.fields[column];
-        field.value = value;
         // The original bytes described the old value and say nothing about this
         // one, so they go.
-        field.verbatim = None;
+        after[column] = Field {
+            value,
+            verbatim: None,
+        };
 
-        let after = record.fields.clone();
-        self.history.record(row, before, after);
+        self.commit(Change::Fields { row, before, after });
     }
 
-    /// Puts the last change back the way it was, and says which row that was so
-    /// a view can redraw only what moved. `None` when there is nothing to undo.
-    pub fn undo(&mut self) -> Option<usize> {
-        let (row, fields) = self.history.undo()?;
-        self.records[row].fields = fields;
-        Some(row)
+    /// Puts an empty record at `at`, which may be the end of the file.
+    pub fn insert_row(&mut self, at: usize) {
+        // A record always holds at least one field: an empty line is a record
+        // of one empty field rather than of none, which is what the parser
+        // would make of the row this writes.
+        let width = self.column_count().max(1);
+        let blank = |terminator| Record {
+            fields: vec![Field::blank(); width],
+            terminator,
+        };
+
+        // Only the last record of a file may end without a terminator, so
+        // appending to a file that ends without one moves that over: the record
+        // that was last gains a terminator, and the new one ends the file.
+        let displaces = at == self.records.len() && self.ends_without_terminator();
+        let (at, before, after) = if displaces {
+            let last = self.records[at - 1].clone();
+            let terminated = Record {
+                terminator: self.terminator_style(),
+                ..last.clone()
+            };
+            (
+                at - 1,
+                vec![last],
+                vec![terminated, blank(RecordTerminator::Absent)],
+            )
+        } else {
+            (at, Vec::new(), vec![blank(self.terminator_at(at))])
+        };
+
+        self.commit(Change::Rows { at, before, after });
     }
 
-    pub fn redo(&mut self) -> Option<usize> {
-        let (row, fields) = self.history.redo()?;
-        self.records[row].fields = fields;
-        Some(row)
+    /// Takes one record out of the file.
+    pub fn delete_row(&mut self, at: usize) {
+        // A file that ended without a terminator still should, so when the last
+        // record goes, the one that becomes last takes that over.
+        let displaces = at + 1 == self.records.len() && self.ends_without_terminator() && at > 0;
+        let (at, before, after) = if displaces {
+            let previous = self.records[at - 1].clone();
+            let unterminated = Record {
+                terminator: RecordTerminator::Absent,
+                ..previous.clone()
+            };
+            (
+                at - 1,
+                vec![previous, self.records[at].clone()],
+                vec![unterminated],
+            )
+        } else {
+            (at, vec![self.records[at].clone()], Vec::new())
+        };
+
+        self.commit(Change::Rows { at, before, after });
+    }
+
+    /// Puts an empty field at `at` in every record that reaches that far.
+    ///
+    /// Reaching that far means having a field there or ending exactly at it, so
+    /// that a column can be added to the right of the last one. A record that
+    /// stops short of the column is left alone: it has no field there to push
+    /// aside, and padding it out to reach would rewrite a line the user was not
+    /// pointing at. Ragged files stay ragged.
+    pub fn insert_column(&mut self, at: usize) {
+        let fields = self
+            .rows_reaching(at, |length, at| length >= at)
+            .map(|row| (row, Field::blank()))
+            .collect();
+
+        self.commit(Change::Column {
+            at,
+            fields,
+            inserted: true,
+        });
+    }
+
+    /// Takes the field at `at` out of every record that has one.
+    pub fn delete_column(&mut self, at: usize) {
+        let fields = self
+            .rows_reaching(at, |length, at| length > at)
+            .map(|row| (row, self.records[row].fields[at].clone()))
+            .collect();
+
+        self.commit(Change::Column {
+            at,
+            fields,
+            inserted: false,
+        });
+    }
+
+    fn rows_reaching(
+        &self,
+        at: usize,
+        reaches: fn(usize, usize) -> bool,
+    ) -> impl Iterator<Item = usize> {
+        self.records
+            .iter()
+            .enumerate()
+            .filter(move |(_, record)| reaches(record.fields.len(), at))
+            .map(|(row, _)| row)
+    }
+
+    /// What a record inserted at `at` should end with: the same as the record
+    /// it displaces, or the way the rest of the file ends if there is none.
+    fn terminator_at(&self, at: usize) -> RecordTerminator {
+        match self.records.get(at) {
+            Some(record) => record.terminator,
+            None => self.terminator_style(),
+        }
+    }
+
+    /// How this file ends its records, taken from the records it has. An empty
+    /// file has only its dialect to go on.
+    fn terminator_style(&self) -> RecordTerminator {
+        self.records
+            .iter()
+            .map(|record| record.terminator)
+            .find(|terminator| *terminator != RecordTerminator::Absent)
+            .unwrap_or(if self.dialect.uses_record_separator() {
+                RecordTerminator::RecordSeparator
+            } else {
+                RecordTerminator::Lf
+            })
+    }
+
+    fn ends_without_terminator(&self) -> bool {
+        self.records
+            .last()
+            .is_some_and(|last| last.terminator == RecordTerminator::Absent)
+    }
+
+    fn commit(&mut self, change: Change) -> Extent {
+        self.history.commit(change, &mut self.records)
+    }
+
+    /// Puts the last change back the way it was, and says how much of the file
+    /// moved so a view can redraw only that. `None` when there is nothing to
+    /// undo.
+    pub fn undo(&mut self) -> Option<Extent> {
+        self.history.undo(&mut self.records)
+    }
+
+    pub fn redo(&mut self) -> Option<Extent> {
+        self.history.redo(&mut self.records)
     }
 
     pub fn can_undo(&self) -> bool {

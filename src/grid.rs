@@ -31,24 +31,33 @@ use gtk::prelude::*;
 /// are realised, which reads as the grid shifting under the pointer.
 const DEFAULT_COLUMN_WIDTH: i32 = 160;
 
+/// What a cell says about itself. The grid knows how to show a value and how to
+/// take a new one; what any of that means is not its business.
+pub enum Event {
+    /// The cell has the keyboard focus, and so is where the next thing the user
+    /// asks for is to happen.
+    Focused,
+    /// An edit finished, leaving this value behind.
+    Edited(String),
+}
+
 /// Rebuilds the view's columns: a row-number gutter wide enough for `rows`,
 /// then one column per title.
 ///
-/// `commit` is called with a row, a column, and a value each time an edit
-/// finishes. The grid knows how to take a value from someone; what to do with
-/// it is not its business.
+/// `report` is called with a row, a column, and whatever the cell there has to
+/// say.
 pub fn set_columns(
     column_view: &gtk::ColumnView,
     titles: &[String],
     rows: usize,
-    commit: impl Fn(usize, usize, String) + 'static,
+    report: impl Fn(usize, usize, Event) + 'static,
 ) {
     remove_all_columns(column_view);
     column_view.append_column(&gutter_column(rows));
 
-    let commit: Rc<cell::Commit> = Rc::new(commit);
+    let report: Rc<cell::Report> = Rc::new(report);
     for (index, title) in titles.iter().enumerate() {
-        column_view.append_column(&data_column(index, title, commit.clone()));
+        column_view.append_column(&data_column(index, title, report.clone()));
     }
 }
 
@@ -89,10 +98,10 @@ fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
         .build()
 }
 
-fn data_column(index: usize, title: &str, commit: Rc<cell::Commit>) -> gtk::ColumnViewColumn {
+fn data_column(index: usize, title: &str, report: Rc<cell::Report>) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
     factory.connect_setup(move |_, item| {
-        cell::setup(as_cell(item), index, commit.clone());
+        cell::setup(as_cell(item), index, report.clone());
     });
     factory.connect_bind(move |_, item| {
         cell::bind(as_cell(item), index);
