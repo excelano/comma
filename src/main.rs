@@ -17,6 +17,16 @@ use gtk::prelude::ApplicationExtManual;
 use crate::application::CommaApplication;
 use crate::config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
 
+/// Marks a string as one to translate without translating it here.
+///
+/// Some strings are written down long before there is a window to show them in,
+/// in tables that are built once and read many times, and a translation has to
+/// be looked up in the language in force at the moment it is read. This is what
+/// lets the extractor see them all the same.
+pub const fn translatable(text: &'static str) -> &'static str {
+    text
+}
+
 fn main() -> glib::ExitCode {
     // SAFETY: setlocale mutates process-global state and is not thread-safe.
     // This is the first statement of main, before GTK or any thread starts.

@@ -225,8 +225,10 @@ pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report
             if let Some(item) = cell.parent() {
                 item.grab_focus();
             }
-            cell.activate_action("win.cell-menu", Some(&(x, y).to_variant()))
-                .unwrap_or_default();
+            if let Some((x, y)) = super::point_in_view(cell.upcast_ref(), x, y) {
+                cell.activate_action("win.cell-menu", Some(&(x, y).to_variant()))
+                    .unwrap_or_default();
+            }
         }
     ));
     cell.add_controller(menu);

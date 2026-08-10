@@ -15,16 +15,8 @@
 use adw::prelude::*;
 use gettextrs::gettext;
 
+use crate::translatable;
 use crate::window::{CommaWindow, key_for_move};
-
-/// Marks a string as one to translate without translating it here.
-///
-/// These are written down long before there is a window to show them in, and a
-/// translation has to be looked up in the language in force at the moment it is
-/// read. This is what lets the extractor see them all the same.
-const fn translatable(text: &'static str) -> &'static str {
-    text
-}
 
 /// Where a row's key comes from.
 enum Key {

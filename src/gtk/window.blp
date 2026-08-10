@@ -28,11 +28,10 @@ template $CommaWindow: Adw.ApplicationWindow {
       }
 
       [end]
-      MenuButton {
+      MenuButton menu_button {
         primary: true;
         icon-name: "open-menu-symbolic";
         tooltip-text: _("Main Menu");
-        menu-model: primary_menu;
       }
 
       [end]
@@ -117,107 +116,3 @@ template $CommaWindow: Adw.ApplicationWindow {
   };
 }
 
-menu primary_menu {
-  section {
-    item {
-      label: _("_Undo");
-      action: "win.undo";
-    }
-
-    item {
-      label: _("_Redo");
-      action: "win.redo";
-    }
-  }
-
-  section {
-    item {
-      label: _("Insert Row Above");
-      action: "win.insert-row-above";
-    }
-
-    item {
-      label: _("Insert Row Below");
-      action: "win.insert-row-below";
-    }
-
-    item {
-      label: _("Delete Row");
-      action: "win.delete-row";
-    }
-  }
-
-  section {
-    item {
-      label: _("Insert Column Before");
-      action: "win.insert-column-before";
-    }
-
-    item {
-      label: _("Insert Column After");
-      action: "win.insert-column-after";
-    }
-
-    item {
-      label: _("Delete Column");
-      action: "win.delete-column";
-    }
-  }
-
-  section {
-    item {
-      label: _("Apply This Order to the File");
-      action: "win.commit-order";
-    }
-  }
-
-  section {
-    submenu {
-      label: _("_Export");
-
-      item {
-        label: _("As PDF…");
-        action: "win.export-pdf";
-      }
-
-      item {
-        label: _("As Web Page…");
-        action: "win.export-html";
-      }
-
-      item {
-        label: _("As Spreadsheet…");
-        action: "win.export-ods";
-      }
-    }
-  }
-
-  section {
-    item {
-      label: _("_Open…");
-      action: "win.open";
-    }
-
-    item {
-      label: _("_Save");
-      action: "win.save";
-    }
-
-    item {
-      label: _("Save _As…");
-      action: "win.save-as";
-    }
-  }
-
-  section {
-    item {
-      label: _("_Keyboard Shortcuts");
-      action: "win.shortcuts";
-    }
-
-    item {
-      label: _("_About Comma");
-      action: "app.about";
-    }
-  }
-}

@@ -97,8 +97,6 @@ impl CommaWindow {
         // is data until this file's own user says otherwise.
         self.imp().rows.set_header(false);
         self.set_action_state("header", &false.to_variant());
-        // Nor does it carry over where the last file was being worked on.
-        self.imp().current.set(None);
 
         self.imp().file.replace(Some(file.clone()));
         self.show(document);

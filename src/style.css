@@ -2,17 +2,27 @@
  * what the platform has no opinion about, because a grid cell is not a widget
  * GTK knows it is styling.
  *
- * Both rules take their colour from the desktop's own accent rather than
- * naming one, so they follow whatever the reader has chosen. Checked once
- * against Adwaita's default accent (#3584e4) for the contrast the text needs:
- * the editing tint comes out #212d3c on a dark view and #e1ecfb on a light one,
+ * Every rule takes its colour from the desktop's own accent rather than naming
+ * one, so they follow whatever the reader has chosen. Checked once against
+ * Adwaita's default accent (#3584e4) for the contrast the text needs: the
+ * editing tint comes out #212d3c on a dark view and #e1ecfb on a light one,
  * which the text over it clears at 13.5:1 and 17:1 against the 4.5:1 that is
- * asked for. The focus ring is a border rather than text and wants 3:1, which
- * is the bar the accent is itself tuned to meet.
+ * asked for. The row tint is a tenth of that strength, #202629 dark and #eff5fd
+ * light, clearing 15:1 and 19:1. The focus ring is a border rather than text and
+ * wants 3:1, which is the bar the accent is itself tuned to meet.
  *
  * Author: David M. Anderson
  * Built with AI assistance (Claude, Anthropic)
  */
+
+/* The row the keyboard is in. On a file wider than the window the cell ring can
+ * be far from the row number that names it, and this is what ties the two back
+ * together. It follows the focus on its own, so it promises nothing about
+ * selection: there is no such thing here, and a row lit up by anything other
+ * than where you are would say there was. */
+columnview row:focus-within {
+  background-color: alpha(@accent_bg_color, 0.08);
+}
 
 /* Where the keyboard is. GTK draws no focus ring around a plain box, and
  * without one there is no telling which cell Enter would open. */

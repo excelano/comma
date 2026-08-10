@@ -28,57 +28,105 @@ use crate::application::CommaApplication;
 use crate::config::APP_ID;
 use crate::grid::{self, Edited, RowModel};
 use crate::shortcuts;
+use crate::translatable;
 
 use cursor::Cursor;
 use files::{EXPORTS, Format};
-use menus::{PRESETS, preset, reading_menu};
+use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu};
 
 pub use cursor::key_for_move;
 
-/// Something done to the document at a row and a column.
-type Operation = fn(&mut Document, usize, usize);
+/// Which way into the file an operation reaches. It is what the operation is
+/// addressed by, and it is what decides which handle offers it: the row numbers
+/// down the side offer the rows, the headings across the top offer the columns,
+/// and a cell offers both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    Row,
+    Column,
+}
 
-/// The operations that add or take away a row or a column, and whether each one
-/// needs a cell to already exist. They all happen at the cell the user last
-/// pointed at, which is why they all take the same two numbers.
+/// One thing that can be done to the shape of the file.
 ///
-/// Inserting a row is the one that does not need a cell. A file every row has
-/// been taken out of has none to point at, and would otherwise be a file no row
-/// could ever be put back into.
-const STRUCTURE: [(&str, Operation, bool); 6] = [
-    (
-        "insert-row-above",
-        |document, row, _| document.insert_row(row),
-        false,
-    ),
-    (
-        "insert-row-below",
+/// Everything about an operation is here: the action it is reached through, the
+/// words every menu offers it in, the axis it is addressed by, and what it does.
+/// Four menus are built from this table, so a seventh operation is one line
+/// rather than an errand around the source.
+#[derive(Debug, Clone, Copy)]
+struct Operation {
+    name: &'static str,
+    label: &'static str,
+    axis: Axis,
+    /// Takes the row or the column, whichever the axis says.
+    change: fn(&mut Document, usize),
+    /// Whether the row or column has to already exist for this to mean
+    /// anything. Inserting a row is the one that does not: a file every row has
+    /// been taken out of has none to point at, and would otherwise be a file no
+    /// row could ever be put back into.
+    needs_cell: bool,
+}
+
+const STRUCTURE: [Operation; 6] = [
+    Operation {
+        name: "insert-row-above",
+        label: translatable("Insert Row Above"),
+        axis: Axis::Row,
+        change: |document, row| document.insert_row(row),
+        needs_cell: false,
+    },
+    Operation {
+        name: "insert-row-below",
+        label: translatable("Insert Row Below"),
+        axis: Axis::Row,
         // Below the last row is the end of the file, and below the row of a
         // file with no rows is the same place.
-        |document, row, _| document.insert_row((row + 1).min(document.row_count())),
-        false,
-    ),
-    (
-        "delete-row",
-        |document, row, _| document.delete_row(row),
-        true,
-    ),
-    (
-        "insert-column-before",
-        |document, _, column| document.insert_column(column),
-        true,
-    ),
-    (
-        "insert-column-after",
-        |document, _, column| document.insert_column(column + 1),
-        true,
-    ),
-    (
-        "delete-column",
-        |document, _, column| document.delete_column(column),
-        true,
-    ),
+        change: |document, row| document.insert_row((row + 1).min(document.row_count())),
+        needs_cell: false,
+    },
+    Operation {
+        name: "delete-row",
+        label: translatable("Delete Row"),
+        axis: Axis::Row,
+        change: |document, row| document.delete_row(row),
+        needs_cell: true,
+    },
+    Operation {
+        name: "insert-column-before",
+        label: translatable("Insert Column Before"),
+        axis: Axis::Column,
+        change: |document, column| document.insert_column(column),
+        needs_cell: true,
+    },
+    Operation {
+        name: "insert-column-after",
+        label: translatable("Insert Column After"),
+        axis: Axis::Column,
+        change: |document, column| document.insert_column(column + 1),
+        needs_cell: true,
+    },
+    Operation {
+        name: "delete-column",
+        label: translatable("Delete Column"),
+        axis: Axis::Column,
+        change: |document, column| document.delete_column(column),
+        needs_cell: true,
+    },
 ];
+
+/// What an operation's action carries: which row or column to act on, or
+/// `AT_CURSOR` for wherever the cursor is.
+///
+/// The headings are why a target exists at all. A menu on a heading is GTK's
+/// own, popped without asking us first, so it cannot move the cursor into the
+/// column it belongs to on the way up — it has to say which column it means.
+/// Everywhere else the cursor has already been moved and there is nothing to
+/// say.
+///
+/// A number with a spare value in it rather than the maybe type this wants,
+/// because GTK puts a window's actions on the session bus and D-Bus has no
+/// maybe: an action typed `mu` brings the window down as it is being exported.
+const TARGET: &str = "i";
+const AT_CURSOR: i32 = -1;
 
 mod imp {
     use super::*;
@@ -94,6 +142,8 @@ mod imp {
         pub column_view: TemplateChild<gtk::ColumnView>,
         #[template_child]
         pub open_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub menu_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
@@ -119,9 +169,11 @@ mod imp {
         /// outlives the focus that set it, so that reaching for a menu does not
         /// count as pointing somewhere else.
         pub current: Cell<Option<Cursor>>,
-        /// The menu the right button opens, made the first time it is asked for
-        /// and then moved to wherever it is asked for next.
+        /// The menus the right button opens, each made the first time it is
+        /// asked for and then moved to wherever it is asked for next. A cell
+        /// offers both halves; a row number offers only the rows.
         pub cell_menu: OnceCell<gtk::PopoverMenu>,
+        pub row_menu: OnceCell<gtk::PopoverMenu>,
         pub settings: gio::Settings,
     }
 
@@ -132,6 +184,7 @@ mod imp {
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
                 open_button: TemplateChild::default(),
+                menu_button: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
                 search_bar: TemplateChild::default(),
                 search_entry: TemplateChild::default(),
@@ -143,6 +196,7 @@ mod imp {
                 file: RefCell::default(),
                 current: Cell::default(),
                 cell_menu: OnceCell::default(),
+                row_menu: OnceCell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -192,6 +246,7 @@ mod imp {
                 ));
             }
 
+            self.menu_button.set_menu_model(Some(&primary_menu()));
             self.dialect_button.set_menu_model(Some(&reading_menu()));
             window.setup_search();
             window.setup_navigation();
@@ -302,6 +357,17 @@ impl CommaWindow {
             })
             .build();
 
+        let go_to = gio::ActionEntry::builder("go-to")
+            .parameter_type(Some(
+                glib::VariantTy::new("(uu)").expect("a position and a column"),
+            ))
+            .activate(|window: &Self, _, param| {
+                if let Some((position, column)) = param.and_then(|at| at.get::<(u32, u32)>()) {
+                    window.go_to(position, column as usize);
+                }
+            })
+            .build();
+
         let cell_menu = gio::ActionEntry::builder("cell-menu")
             .parameter_type(Some(
                 glib::VariantTy::new("(dd)").expect("a pair of numbers"),
@@ -309,6 +375,17 @@ impl CommaWindow {
             .activate(|window: &Self, _, param| {
                 if let Some((x, y)) = param.and_then(|at| at.get::<(f64, f64)>()) {
                     window.show_cell_menu(x, y);
+                }
+            })
+            .build();
+
+        let row_menu = gio::ActionEntry::builder("row-menu")
+            .parameter_type(Some(
+                glib::VariantTy::new("(dd)").expect("a pair of numbers"),
+            ))
+            .activate(|window: &Self, _, param| {
+                if let Some((x, y)) = param.and_then(|at| at.get::<(f64, f64)>()) {
+                    window.show_row_menu(x, y);
                 }
             })
             .build();
@@ -356,7 +433,9 @@ impl CommaWindow {
             find,
             replace_all,
             move_cursor,
+            go_to,
             cell_menu,
+            row_menu,
             keyboard,
             export_pdf,
             export_html,
@@ -365,18 +444,24 @@ impl CommaWindow {
             delimiter,
             header,
         ];
-        for (name, change, needs_cell) in STRUCTURE {
+        for operation in STRUCTURE {
             entries.push(
-                gio::ActionEntry::builder(name)
-                    .activate(move |window: &Self, _, _| window.change_shape(change, needs_cell))
+                gio::ActionEntry::builder(operation.name)
+                    .parameter_type(Some(
+                        glib::VariantTy::new(TARGET).expect("a row or a column, or neither"),
+                    ))
+                    .activate(move |window: &Self, _, param| {
+                        let at = param.and_then(|at| at.get::<i32>()).unwrap_or(AT_CURSOR);
+                        window.change_shape(&operation, at);
+                    })
                     .build(),
             );
         }
         self.add_action_entries(entries);
 
         // Everything but Open needs a document to work on.
-        for (name, _, _) in STRUCTURE {
-            self.set_action_enabled(name, false);
+        for operation in STRUCTURE {
+            self.set_action_enabled(operation.name, false);
         }
         for name in [
             "save",
@@ -434,6 +519,20 @@ impl CommaWindow {
     fn show(&self, document: Document) {
         let imp = self.imp();
 
+        // A file starts at its beginning. The cursor is where an operation
+        // lands, so leaving it undecided until the keyboard arrives would mean
+        // a menu full of things greyed out on a file that is plainly there.
+        imp.current.set(
+            match document.row_count() > 0 && document.column_count() > 0 {
+                true => Some(Cursor {
+                    position: 0,
+                    row: 0,
+                    column: 0,
+                }),
+                false => None,
+            },
+        );
+
         imp.rows.set_document(document);
         self.rebuild_columns();
         self.show_dialect();
@@ -476,6 +575,18 @@ impl CommaWindow {
                 move |edit| window.cell_edited(edit)
             ),
         );
+
+        // Each heading offers what can be done to its own column. Left button
+        // sorts, as it did; the other one asks.
+        let columns = imp.column_view.columns();
+        for index in 0..titles.len() {
+            if let Some(column) = columns
+                .item(index as u32 + 1)
+                .and_downcast::<gtk::ColumnViewColumn>()
+            {
+                column.set_header_menu(Some(&column_menu(index)));
+            }
+        }
 
         if let Some((column, direction)) = sorted_by
             && column < titles.len()
@@ -545,21 +656,41 @@ impl CommaWindow {
         }
     }
 
-    /// Adds or removes a row or a column at the current cell.
-    fn change_shape(&self, change: Operation, needs_cell: bool) {
+    /// Adds or removes a row or a column, at the one the menu named or at the
+    /// cursor when it named none.
+    fn change_shape(&self, operation: &Operation, at: i32) {
         let Some(document) = self.imp().rows.document() else {
             return;
         };
-        let (row, column) = match (self.current_cell(), needs_cell) {
-            (Some(cell), _) => cell,
-            (None, true) => return,
+
+        let index = match (usize::try_from(at), self.current_cell()) {
+            (Ok(index), _) => index,
+            (Err(_), Some((row, column))) => match operation.axis {
+                Axis::Row => row,
+                Axis::Column => column,
+            },
             // Nothing to point at, so the operation happens where the file
             // begins.
-            (None, false) => (0, 0),
+            (Err(_), None) if !operation.needs_cell => 0,
+            (Err(_), None) => return,
         };
 
-        change(&mut document.borrow_mut(), row, column);
+        // A menu names something that was there when it opened. Taking away
+        // what is no longer there is nothing at all.
+        let reach = match operation.axis {
+            Axis::Row => document.borrow().row_count(),
+            Axis::Column => document.borrow().column_count(),
+        };
+        if operation.needs_cell && index >= reach {
+            return;
+        }
+
+        // Read before the change, because rebuilding the grid moves the focus
+        // and the cursor follows the focus.
+        let was = self.imp().current.get();
+        (operation.change)(&mut document.borrow_mut(), index);
         self.reload();
+        self.follow_change(was);
     }
 
     /// What the window says about the document rather than shows of it: whether
@@ -600,8 +731,9 @@ impl CommaWindow {
     fn show_reach(&self) {
         let cell = self.current_cell().is_some();
         let document = self.imp().rows.document().is_some();
-        for (name, _, needs_cell) in STRUCTURE {
-            self.set_action_enabled(name, if needs_cell { cell } else { document });
+        for operation in STRUCTURE {
+            let reachable = if operation.needs_cell { cell } else { document };
+            self.set_action_enabled(operation.name, reachable);
         }
     }
 

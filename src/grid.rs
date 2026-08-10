@@ -15,6 +15,7 @@
 mod cell;
 mod letters;
 mod model;
+mod number;
 mod order;
 mod row;
 
@@ -82,6 +83,14 @@ pub fn cell_within(widget: &gtk::Widget) -> Option<Cell> {
     find(widget, &|_| true)
 }
 
+/// A point inside one of the grid's widgets, in the table's own coordinates,
+/// which is where a menu that hangs off the table has to be told to point.
+fn point_in_view(widget: &gtk::Widget, x: f64, y: f64) -> Option<(f64, f64)> {
+    let view = widget.ancestor(gtk::ColumnView::static_type())?;
+    let at = widget.compute_point(&view, &gtk::graphene::Point::new(x as f32, y as f32))?;
+    Some((at.x() as f64, at.y() as f64))
+}
+
 /// The first cell inside a widget that answers to `wanted`.
 fn find(widget: &gtk::Widget, wanted: &dyn Fn(&Cell) -> bool) -> Option<Cell> {
     if let Some(cell) = widget.downcast_ref::<Cell>()
@@ -114,21 +123,16 @@ fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
 
     let factory = gtk::SignalListItemFactory::new();
     factory.connect_setup(move |_, item| {
-        let label = gtk::Label::builder()
-            .xalign(1.0)
-            .width_chars(digits)
-            .css_classes(["dim-label", "numeric"])
-            .build();
-        as_cell(item).set_child(Some(&label));
+        as_cell(item).set_child(Some(&number::Number::new(digits)));
     });
     factory.connect_bind(|_, item| {
         let cell = as_cell(item);
-        let label = cell
+        let number = cell
             .child()
-            .and_downcast::<gtk::Label>()
-            .expect("setup put a label here");
+            .and_downcast::<number::Number>()
+            .expect("setup put a number here");
         let row = cell.item().and_downcast::<Row>().expect("rows hold Rows");
-        label.set_text(&row.number().to_string());
+        number.show_row(cell.position(), row.index());
     });
 
     gtk::ColumnViewColumn::builder()

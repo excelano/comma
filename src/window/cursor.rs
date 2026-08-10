@@ -54,6 +54,11 @@ const MOVES: [(&str, &str); 13] = [
     ("edit", "F2"),
 ];
 
+/// How many frames to keep looking for a cell the keyboard was sent to before
+/// giving up on it. A handful: the view draws the row it was scrolled to within
+/// a frame or two, and a cell that has not appeared by then is not going to.
+const TRIES: u8 = 8;
+
 /// Which key asks the table for a move, for anything that wants to say so
 /// without spelling it out a second time.
 pub fn key_for_move(how: &str) -> Option<&'static str> {
@@ -114,6 +119,21 @@ impl CommaWindow {
             let Some(cell) = window.focused_cell() else {
                 return;
             };
+            // Focus arriving from the toolbar lands on a whole row rather than
+            // on any one cell of it, and a row lit up on its own says the row
+            // is what the next thing will happen to, which is not true here.
+            // So the row is passed straight through to a cell: the one the
+            // cursor already names, rather than the first one to hand, so that
+            // leaving the table and coming back brings you back where you were.
+            if !cell.has_focus() {
+                match window.imp().current.get() {
+                    Some(cursor) => window.go_to(cursor.position, cursor.column),
+                    None => {
+                        cell.grab_focus();
+                    }
+                }
+                return;
+            }
             window.imp().current.set(Some(Cursor {
                 position: cell.position(),
                 row: cell.row(),
@@ -171,6 +191,35 @@ impl CommaWindow {
         self.go_to(position, column);
     }
 
+    /// Puts the keyboard back where it was after the table has been rebuilt
+    /// underneath it.
+    ///
+    /// The cursor has to be handed in from before the change rather than read
+    /// here. Throwing away the widget the focus was on makes GTK put the focus
+    /// somewhere else of its own accord, and following the focus is how the
+    /// cursor is kept, so by now it has already been moved to wherever the
+    /// wreckage left it.
+    ///
+    /// Where it goes back to is the same place in the table, not the same row
+    /// of the file: after a delete that is whatever took the old row's place,
+    /// which is where the next thing is likely to happen.
+    pub(super) fn follow_change(&self, cursor: Option<Cursor>) {
+        let imp = self.imp();
+        let Some(cursor) = cursor else {
+            return;
+        };
+
+        let rows = imp.sorted.n_items();
+        let columns = imp.column_view.columns().n_items().saturating_sub(1) as usize;
+        if rows == 0 || columns == 0 {
+            return;
+        }
+        self.go_to(
+            cursor.position.min(rows - 1),
+            cursor.column.min(columns - 1),
+        );
+    }
+
     /// Takes the keyboard out of the table, to the first thing in the window
     /// that is not part of it.
     fn leave_table(&self) {
@@ -185,7 +234,7 @@ impl CommaWindow {
     }
 
     /// Puts the cursor, and the keyboard with it, on one cell of the table.
-    fn go_to(&self, position: u32, column: usize) {
+    pub(super) fn go_to(&self, position: u32, column: usize) {
         let imp = self.imp();
         let Some(target) = imp
             .column_view
@@ -214,15 +263,18 @@ impl CommaWindow {
         imp.column_view
             .scroll_to(position, Some(&target), gtk::ListScrollFlags::empty(), None);
         if !grid::focus_cell(&imp.column_view, position, column) {
-            // That row has not been drawn yet. It will have been once the
-            // scrolling above has happened, which is the next turn of the loop.
-            glib::idle_add_local_once(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move || {
-                    grid::focus_cell(&window.imp().column_view, position, column);
+            // That cell has not been drawn yet, because the view was just
+            // asked to scroll or because every widget in it was just thrown
+            // away and built again. Either way it appears at a frame, not at a
+            // turn of the loop, so this waits for frames rather than for idle.
+            let left = std::cell::Cell::new(TRIES);
+            imp.column_view.add_tick_callback(move |view, _| {
+                if grid::focus_cell(view, position, column) || left.get() == 0 {
+                    return glib::ControlFlow::Break;
                 }
-            ));
+                left.set(left.get() - 1);
+                glib::ControlFlow::Continue
+            });
         }
         self.show_reach();
     }
