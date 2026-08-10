@@ -74,7 +74,9 @@ impl CommaWindow {
     fn bind_window_state(&self) {
         let settings = &self.imp().settings;
         settings.bind("window-width", self, "default-width").build();
-        settings.bind("window-height", self, "default-height").build();
+        settings
+            .bind("window-height", self, "default-height")
+            .build();
         settings.bind("window-maximized", self, "maximized").build();
     }
 }

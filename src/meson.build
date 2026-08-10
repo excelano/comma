@@ -57,7 +57,6 @@ cargo_build = custom_target(
   command: [
     cargo_build_script,
     meson.project_source_root() / 'Cargo.toml',
-    meson.project_build_root() / 'cargo-target',
     cargo_profile,
     '@OUTPUT@',
   ],
