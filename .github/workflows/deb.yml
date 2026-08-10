@@ -1,0 +1,89 @@
+name: deb
+
+# Builds a Debian package for each architecture and attaches both to a release,
+# from where they are added to the apt repository by hand.
+#
+# Triggers:
+# - `release: published`, which fires when a person publishes the release.
+# - `workflow_dispatch`, for when something else created it. A release created
+#   by a workflow using the default GITHUB_TOKEN does not fire any event, which
+#   is a GitHub safeguard against workflows triggering each other and has no
+#   opt-out. Run it by hand with:
+#     gh workflow run deb.yml -f tag=v<x.y.z>
+#
+# The build runs in a Debian 13 container, for the same reason CI does, and the
+# upload runs on the runner itself, which is where a current gh lives.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build packages for (e.g. v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    container: rust:1-trixie
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            meson ninja-build libgtk-4-dev libadwaita-1-dev \
+            blueprint-compiler gettext libglib2.0-dev-bin \
+            desktop-file-utils appstream dpkg-dev
+
+      - name: Build the package
+        run: build-aux/build-deb.sh
+
+      # Building on a runner of the architecture rather than cross-compiling is
+      # what makes this worth checking: a package labelled arm64 holding an
+      # x86-64 binary installs and then does not run.
+      - name: Check the architecture
+        run: |
+          package=$(ls target/debian/*.deb)
+          test "$(dpkg-deb -f "$package" Architecture)" = "${{ matrix.arch }}"
+          dpkg-deb --fsys-tarfile "$package" | tar -xO ./usr/bin/comma > comma.bin
+          file comma.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch }}
+          path: target/debian/*.deb
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Attach the packages to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name || inputs.tag }}" \
+            packages/*.deb --clobber

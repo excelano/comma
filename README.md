@@ -14,9 +14,29 @@ Clicking a column header puts the grid in that order without touching the file; 
 
 Export writes what the grid is showing as a PDF, a web page, or an OpenDocument spreadsheet. All three are output: they are never reopened, never offered as Save, and every value goes into them as text, so a leading zero is still a leading zero and a sixteen-digit account number is still itself.
 
-Not written yet: keyboard navigation works but has not been gone over properly, there is no context menu, the icon is a placeholder, and there are no translations yet.
+The keyboard reaches everything, the row numbers and column headings are handles for the operations that act on them, and Comma speaks English and German. Still to come: the row-number gutter scrolls away horizontally instead of staying pinned, and nothing acts on more than one cell at a time.
 
-## Building
+## Installing
+
+Comma is built against GTK 4.18 and libadwaita 1.7, so it needs a distribution carrying both — Debian 13 or newer, or Ubuntu 25.04 or newer. Older releases are not a matter of rebuilding; the widgets are not there.
+
+### Debian and Ubuntu
+
+Comma is packaged for amd64 and arm64 in the Excelano apt repository. Add the repository once:
+
+```sh
+curl -fsSL https://excelano.com/apt/setup.sh | sudo sh
+```
+
+Then:
+
+```sh
+sudo apt install comma
+```
+
+Updates arrive with `apt upgrade` like any other package.
+
+### From source
 
 Comma builds with Meson, which drives Cargo for the Rust compilation and handles the desktop entry, AppStream metadata, GSettings schema, icons, and translations. Build dependencies on Debian 13:
 
@@ -25,6 +45,8 @@ sudo apt install meson ninja-build libgtk-4-dev libadwaita-1-dev \
     blueprint-compiler gettext libglib2.0-dev-bin desktop-file-utils appstream
 ```
 
+The Rust toolchain has to come from [rustup](https://rustup.rs) rather than from apt: the GTK bindings ask for Rust 1.92 and Debian 13 packages 1.85.
+
 Then configure, build, and install into your home prefix:
 
 ```sh
@@ -32,11 +54,15 @@ meson setup builddir --prefix="$HOME/.local"
 ninja -C builddir install
 ```
 
-Run it with `~/.local/bin/comma`. Installing is not optional — Comma loads its compiled resource bundle and its GSettings schema from the install prefix, so running the binary straight out of the build directory will not work.
+Run it with `~/.local/bin/comma`. Installing is not optional — Comma loads its compiled resource bundle and its GSettings schema from the install prefix, so running the binary straight out of the build directory will not work. If you have also installed the package, note that `~/.local/bin` usually comes first on `PATH`, so this build is the one that runs.
 
-`ninja -C builddir test` validates the desktop entry, the AppStream metainfo, and the GSettings schema.
+## Development
 
-Meson generates `src/config.rs` during configuration, so `cargo build` on its own only works once `meson setup` has run at least once.
+`ninja -C builddir test` validates the desktop entry, the AppStream metainfo, and the GSettings schema; `cargo test` runs the rest.
+
+Meson generates `src/config.rs` during configuration, so `cargo build` on its own only works once `meson setup` has run at least once. Configuring also checks that `meson.build` and `Cargo.toml` agree about the version, because they each carry their own copy of it.
+
+`build-aux/build-deb.sh` builds the Debian package, by staging a normal `meson install` and wrapping it. It configures with `--prefix=/usr`, so it rewrites `src/config.rs` and puts the previous one back when it finishes.
 
 ## License
 

@@ -1,0 +1,21 @@
+version: 2
+
+# One grouped pull request per ecosystem per week. Ungrouped updates each touch
+# Cargo.lock, so merging the first leaves every other one needing a rebase.
+
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      cargo:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']

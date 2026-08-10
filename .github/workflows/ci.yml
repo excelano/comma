@@ -1,0 +1,56 @@
+name: CI
+
+# Every job runs in a Debian 13 container rather than on the runner itself.
+# Comma is built against GTK 4.18 and libadwaita 1.7 and no GitHub runner image
+# carries either -- Ubuntu 24.04 is still on GTK 4.14. The image is the official
+# Rust one on a Debian 13 base, because Debian's own rustc is 1.85 and the GTK
+# bindings ask for 1.92.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: rust:1-trixie
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            meson ninja-build libgtk-4-dev libadwaita-1-dev \
+            blueprint-compiler gettext libglib2.0-dev-bin \
+            desktop-file-utils appstream
+
+      # The Rust image installs the minimal profile, which is the compiler and
+      # Cargo and nothing else.
+      - name: Install rustfmt and clippy
+        run: rustup component add rustfmt clippy
+
+      # Meson generates src/config.rs, so Cargo cannot compile anything at all
+      # until this has run once.
+      - name: Configure
+        run: meson setup builddir --prefix=/usr
+
+      - name: Formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test
+
+      - name: Build
+        run: ninja -C builddir
+
+      # The desktop entry, the AppStream metainfo, and the GSettings schema.
+      - name: Validate the installed data
+        run: meson test -C builddir

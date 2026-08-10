@@ -2,6 +2,9 @@
 name = "comma"
 version = "0.1.0"
 edition = "2024"
+# The GTK bindings ask for this, and it is well above the 1.85 Debian 13 ships,
+# so building from source means a toolchain from rustup rather than from apt.
+rust-version = "1.92"
 description = "Edit delimited text files"
 authors = ["David M. Anderson"]
 license = "MIT"

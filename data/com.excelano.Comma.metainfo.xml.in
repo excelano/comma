@@ -37,4 +37,23 @@
   <url type="vcs-browser">https://github.com/excelano/comma</url>
 
   <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-08-10">
+      <description>
+        <p>
+          The first release. Comma opens a delimited file, guesses its
+          delimiter and says which one it guessed, and edits it as a grid.
+          Rows and columns can be inserted and deleted, everything can be
+          undone, and saving a file changes only the lines you edited.
+        </p>
+        <p>
+          Sorting and searching are views of the file rather than changes to
+          it, and one menu item writes a sort order down when you want it.
+          What the grid is showing can be exported as a PDF, a web page, or an
+          OpenDocument spreadsheet.
+        </p>
+      </description>
+    </release>
+  </releases>
 </component>
