@@ -45,6 +45,12 @@ impl Row {
         row
     }
 
+    /// Which record of the file this is, counting from zero, which is how the
+    /// document is addressed.
+    pub(super) fn index(&self) -> usize {
+        self.imp().index.get()
+    }
+
     /// What the gutter shows. Files are counted from one everywhere a person
     /// will read the number, including in every other tool that opens them.
     pub fn number(&self) -> usize {

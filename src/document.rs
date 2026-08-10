@@ -18,6 +18,7 @@
 // Built with AI assistance (Claude, Anthropic)
 
 mod dialect;
+mod history;
 mod parse;
 mod serialize;
 mod sniff;
@@ -26,6 +27,8 @@ pub use dialect::{Dialect, DialectError};
 pub use sniff::sniff;
 
 use std::fmt;
+
+use history::History;
 
 const BYTE_ORDER_MARK: &[u8] = &[0xEF, 0xBB, 0xBF];
 
@@ -41,7 +44,7 @@ pub struct Document {
     dialect: Dialect,
     byte_order_mark: bool,
     records: Vec<Record>,
-    modified: bool,
+    history: History,
 }
 
 #[derive(Debug, Clone)]
@@ -112,7 +115,7 @@ impl Document {
             dialect,
             byte_order_mark,
             records: parse::parse(text, dialect),
-            modified: false,
+            history: History::new(),
         })
     }
 
@@ -185,8 +188,18 @@ impl Document {
 
     /// Sets one cell, widening the record with empty fields if the column is
     /// past its end.
+    ///
+    /// Setting a cell to what it already holds does nothing at all: no change
+    /// to the file, and nothing to undo. Retyping a value is not changing it,
+    /// and a field left alone keeps whatever spelling the file gave it.
     pub fn set_value(&mut self, row: usize, column: usize, value: impl Into<String>) {
+        let value = value.into();
+        if self.value(row, column) == value {
+            return;
+        }
+
         let record = &mut self.records[row];
+        let before = record.fields.clone();
 
         while record.fields.len() <= column {
             record.fields.push(Field {
@@ -196,19 +209,51 @@ impl Document {
         }
 
         let field = &mut record.fields[column];
-        field.value = value.into();
+        field.value = value;
         // The original bytes described the old value and say nothing about this
         // one, so they go.
         field.verbatim = None;
 
-        self.modified = true;
+        let after = record.fields.clone();
+        self.history.record(row, before, after);
     }
 
+    /// Puts the last change back the way it was, and says which row that was so
+    /// a view can redraw only what moved. `None` when there is nothing to undo.
+    pub fn undo(&mut self) -> Option<usize> {
+        let (row, fields) = self.history.undo()?;
+        self.records[row].fields = fields;
+        Some(row)
+    }
+
+    pub fn redo(&mut self) -> Option<usize> {
+        let (row, fields) = self.history.redo()?;
+        self.records[row].fields = fields;
+        Some(row)
+    }
+
+    pub fn can_undo(&self) -> bool {
+        self.history.can_undo()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        self.history.can_redo()
+    }
+
+    /// Whether the file on disk still matches this document. Undoing back to
+    /// the state that was last written answers no again: what makes a document
+    /// modified is differing from the file, not having been touched.
     pub fn is_modified(&self) -> bool {
-        self.modified
+        self.history.is_modified()
     }
 
     pub fn mark_saved(&mut self) {
-        self.modified = false;
+        self.history.mark_saved();
+    }
+
+    /// Says that this document no longer matches the file it came from, for
+    /// changes that are not edits and so cannot be undone.
+    pub fn mark_modified(&mut self) {
+        self.history.mark_unsaved();
     }
 }

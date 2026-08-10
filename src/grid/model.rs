@@ -99,6 +99,18 @@ impl RowModel {
         self.imp().header.get()
     }
 
+    /// Says that one record of the document now reads differently, so the view
+    /// draws that row again and leaves the rest alone. A record the header
+    /// toggle has taken out of the body is not a row here and is ignored.
+    pub fn row_changed(&self, row: usize) {
+        let Some(position) = row.checked_sub(self.imp().first_row()) else {
+            return;
+        };
+        if (position as u32) < self.n_items() {
+            self.items_changed(position as u32, 1, 1);
+        }
+    }
+
     /// Takes the first record out of the body, or puts it back. Nothing is
     /// hidden that the file does not still hold: the row is a title now, and
     /// the numbers on the remaining rows still say where in the file they are.

@@ -19,6 +19,14 @@ template $CommaWindow: Adw.ApplicationWindow {
         tooltip-text: _("Open a File");
       }
 
+      [start]
+      Button {
+        label: _("_Save");
+        use-underline: true;
+        action-name: "win.save";
+        tooltip-text: _("Save This File");
+      }
+
       [end]
       MenuButton {
         primary: true;
@@ -79,8 +87,30 @@ template $CommaWindow: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
+      label: _("_Undo");
+      action: "win.undo";
+    }
+
+    item {
+      label: _("_Redo");
+      action: "win.redo";
+    }
+  }
+
+  section {
+    item {
       label: _("_Open…");
       action: "win.open";
+    }
+
+    item {
+      label: _("_Save");
+      action: "win.save";
+    }
+
+    item {
+      label: _("Save _As…");
+      action: "win.save-as";
     }
   }
 

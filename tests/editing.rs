@@ -164,6 +164,146 @@ fn a_document_reports_whether_it_has_been_changed() {
 }
 
 #[test]
+fn setting_a_cell_to_what_it_already_holds_changes_nothing() {
+    // Every field on this file's second line is spelled in a way Comma would
+    // not choose for itself, so a field rewritten rather than left alone shows
+    // up immediately.
+    let name = "odd-quoting.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    let unchanged = document.value(1, 1).to_owned();
+    document.set_value(1, 1, unchanged);
+
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+    assert!(!document.is_modified());
+    assert!(!document.can_undo());
+}
+
+#[test]
+fn undo_puts_the_original_bytes_back() {
+    let name = "odd-quoting.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    document.set_value(1, 1, "changed");
+    assert_ne!(visible(&document.to_bytes()), visible(&original));
+
+    assert_eq!(document.undo(), Some(1), "undo reports the row it restored");
+    assert_eq!(
+        visible(&document.to_bytes()),
+        visible(&original),
+        "undo has to restore the field's original spelling, not just its value"
+    );
+}
+
+#[test]
+fn redo_puts_the_edit_back() {
+    let mut document = load("plain.csv");
+
+    document.set_value(1, 1, "Lovelace");
+    document.undo();
+    assert_eq!(document.value(1, 1), "Ada");
+
+    assert_eq!(document.redo(), Some(1));
+    assert_eq!(document.value(1, 1), "Lovelace");
+    assert!(!document.can_redo());
+}
+
+#[test]
+fn undo_runs_out_at_the_file_it_started_from() {
+    let mut document = load("plain.csv");
+    assert!(!document.can_undo());
+    assert!(!document.can_redo());
+
+    document.set_value(1, 1, "one");
+    document.set_value(1, 1, "two");
+
+    assert_eq!(document.undo(), Some(1));
+    assert_eq!(document.undo(), Some(1));
+    assert_eq!(document.undo(), None);
+    assert_eq!(document.value(1, 1), "Ada");
+}
+
+#[test]
+fn undoing_a_widening_edit_narrows_the_record_again() {
+    let name = "ragged.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    document.set_value(1, 2, "z");
+    assert_eq!(document.field_count(1), 3);
+
+    document.undo();
+    assert_eq!(document.field_count(1), 1);
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+}
+
+#[test]
+fn a_new_edit_discards_what_was_undone() {
+    let mut document = load("plain.csv");
+
+    document.set_value(1, 1, "one");
+    document.undo();
+    assert!(document.can_redo());
+
+    document.set_value(1, 1, "two");
+    assert!(
+        !document.can_redo(),
+        "the new edit happens instead of the old"
+    );
+
+    document.undo();
+    assert_eq!(document.value(1, 1), "Ada");
+}
+
+#[test]
+fn undoing_back_to_the_saved_state_is_not_modified() {
+    let mut document = load("plain.csv");
+    document.set_value(1, 1, "Lovelace");
+    document.mark_saved();
+
+    document.set_value(2, 1, "Hopper");
+    assert!(document.is_modified());
+
+    document.undo();
+    assert!(
+        !document.is_modified(),
+        "this is the file that was written, so there is nothing to write"
+    );
+
+    document.redo();
+    assert!(document.is_modified());
+}
+
+#[test]
+fn a_saved_state_that_can_no_longer_be_reached_stays_modified() {
+    let mut document = load("plain.csv");
+
+    document.set_value(1, 1, "Lovelace");
+    document.mark_saved();
+
+    // Undoing past the save and then editing throws away the only route back
+    // to what is on disk, so the document differs from it from here on.
+    document.undo();
+    document.set_value(2, 1, "Hopper");
+    assert!(document.is_modified());
+
+    document.undo();
+    assert!(document.is_modified());
+}
+
+#[test]
+fn a_document_can_be_told_it_no_longer_matches_its_file() {
+    let mut document = load("plain.csv");
+    assert!(!document.is_modified());
+
+    document.mark_modified();
+    assert!(document.is_modified());
+    assert!(!document.can_undo(), "that was not an edit");
+}
+
+#[test]
 fn every_corpus_file_survives_an_edit_and_a_reload() {
     for name in [
         "plain.csv",

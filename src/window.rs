@@ -43,9 +43,9 @@ mod imp {
         #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
         pub rows: RowModel,
-        /// The file as it was read. Kept so that choosing a different delimiter
-        /// re-reads the same bytes rather than the file as it is now.
-        pub bytes: RefCell<Vec<u8>>,
+        /// The file the document was read from, and the one Save writes back
+        /// to.
+        pub file: RefCell<Option<gio::File>>,
         pub settings: gio::Settings,
     }
 
@@ -57,7 +57,7 @@ mod imp {
                 column_view: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
                 rows: RowModel::default(),
-                bytes: RefCell::default(),
+                file: RefCell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -96,7 +96,19 @@ mod imp {
     }
 
     impl WidgetImpl for CommaWindow {}
-    impl WindowImpl for CommaWindow {}
+
+    impl WindowImpl for CommaWindow {
+        /// Nothing unsaved leaves without being asked about first.
+        fn close_request(&self) -> glib::Propagation {
+            if !self.obj().is_modified() {
+                return self.parent_close_request();
+            }
+
+            self.obj().confirm_discard(|window| window.destroy());
+            glib::Propagation::Stop
+        }
+    }
+
     impl ApplicationWindowImpl for CommaWindow {}
     impl AdwApplicationWindowImpl for CommaWindow {}
 }
@@ -130,6 +142,24 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.choose_file())
             .build();
 
+        let save = gio::ActionEntry::builder("save")
+            .activate(|window: &Self, _, _| {
+                window.save();
+            })
+            .build();
+
+        let save_as = gio::ActionEntry::builder("save-as")
+            .activate(|window: &Self, _, _| window.save_as())
+            .build();
+
+        let undo = gio::ActionEntry::builder("undo")
+            .activate(|window: &Self, _, _| window.step_history(Document::undo))
+            .build();
+
+        let redo = gio::ActionEntry::builder("redo")
+            .activate(|window: &Self, _, _| window.step_history(Document::redo))
+            .build();
+
         let delimiter = gio::ActionEntry::builder("delimiter")
             .parameter_type(Some(glib::VariantTy::STRING))
             .state(PRESETS[0].0.to_variant())
@@ -156,7 +186,12 @@ impl CommaWindow {
             })
             .build();
 
-        self.add_action_entries([open, delimiter, header]);
+        self.add_action_entries([open, save, save_as, undo, redo, delimiter, header]);
+
+        // Everything but Open needs a document to work on.
+        for name in ["save", "save-as", "undo", "redo"] {
+            self.set_action_enabled(name, false);
+        }
     }
 
     fn set_action_state(&self, name: &str, state: &glib::Variant) {
@@ -165,7 +200,17 @@ impl CommaWindow {
         }
     }
 
+    fn set_action_enabled(&self, name: &str, enabled: bool) {
+        if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+            action.set_enabled(enabled);
+        }
+    }
+
     fn choose_file(&self) {
+        self.confirm_discard(|window| window.show_open_dialog());
+    }
+
+    fn show_open_dialog(&self) {
         let dialog = gtk::FileDialog::builder()
             .title(gettext("Open File"))
             .filters(&file_filters())
@@ -181,7 +226,9 @@ impl CommaWindow {
             move |result| match result {
                 Ok(file) => window.open_file(&file),
                 Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
-                Err(error) => window.report_failure(&error.to_string()),
+                Err(error) => {
+                    window.report(&gettext("Could Not Open the File"), &error.to_string())
+                }
             },
         );
     }
@@ -189,14 +236,18 @@ impl CommaWindow {
     pub fn open_file(&self, file: &gio::File) {
         let bytes = match file.load_contents(gio::Cancellable::NONE) {
             Ok((bytes, _etag)) => bytes,
-            Err(error) => return self.report_failure(&error.to_string()),
+            Err(error) => {
+                return self.report(&gettext("Could Not Open the File"), &error.to_string());
+            }
         };
 
         // Nothing on screen changes until the file has been read, so a file
         // that will not open leaves the one that did alone.
         let document = match Document::from_bytes(&bytes, sniff(&bytes)) {
             Ok(document) => document,
-            Err(error) => return self.report_failure(&error.to_string()),
+            Err(error) => {
+                return self.report(&gettext("Could Not Open the File"), &error.to_string());
+            }
         };
 
         // A new file carries no opinions over from the last one. Its first row
@@ -204,25 +255,37 @@ impl CommaWindow {
         self.imp().rows.set_header(false);
         self.set_action_state("header", &false.to_variant());
 
-        self.imp().bytes.replace(bytes.to_vec());
+        self.imp().file.replace(Some(file.clone()));
         self.show(document);
-        self.show_file_name(file);
+        self.show_folder(file);
     }
 
-    /// Reads the file again under a different delimiter. The bytes have already
-    /// been read once, so the only thing that can differ is where the fields
-    /// are.
+    /// Reads the document again under a different delimiter.
+    ///
+    /// It is read from itself rather than from the file. An untouched document
+    /// writes back the bytes it was opened with, so for one that has not been
+    /// edited this is the same as reading the file again; for one that has, the
+    /// edits come across into whatever shape the new delimiter gives them.
     fn read_again_as(&self, dialect: Dialect) {
-        let imp = self.imp();
-        if imp.rows.document().is_none_or(|document| {
-            let current = document.borrow().dialect();
-            current == dialect
-        }) {
+        let Some(current) = self.imp().rows.document() else {
             return;
+        };
+        let (bytes, modified) = {
+            let current = current.borrow();
+            if current.dialect() == dialect {
+                return;
+            }
+            (current.to_bytes(), current.is_modified())
+        };
+
+        let mut document = Document::from_bytes(&bytes, dialect)
+            .expect("these bytes came from a document that was read once already");
+        if modified {
+            // The edits came across; the history did not. What was undoable was
+            // undoable in a shape the file no longer has.
+            document.mark_modified();
         }
 
-        let document = Document::from_bytes(&imp.bytes.borrow(), dialect)
-            .expect("these bytes were read once already");
         self.show(document);
     }
 
@@ -232,6 +295,7 @@ impl CommaWindow {
         imp.rows.set_document(document);
         self.rebuild_columns();
         self.show_dialect();
+        self.show_state();
 
         imp.dialect_button.set_visible(true);
         imp.stack.set_visible_child_name("grid");
@@ -263,7 +327,149 @@ impl CommaWindow {
             })
             .collect();
 
-        grid::set_columns(&imp.column_view, &titles, document.row_count());
+        grid::set_columns(
+            &imp.column_view,
+            &titles,
+            document.row_count(),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |row, column, value| window.commit_edit(row, column, value)
+            ),
+        );
+    }
+
+    /// Takes what was typed into a cell. The document decides whether that is a
+    /// change at all: retyping a value leaves the file exactly as it was.
+    fn commit_edit(&self, row: usize, column: usize, value: String) {
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+        document.borrow_mut().set_value(row, column, value);
+        self.show_state();
+    }
+
+    fn step_history(&self, step: fn(&mut Document) -> Option<usize>) {
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+        let Some(row) = step(&mut document.borrow_mut()) else {
+            return;
+        };
+
+        let imp = self.imp();
+        imp.rows.row_changed(row);
+        if imp.rows.header() && row == 0 {
+            // That record is a set of column titles at the moment, not a row.
+            self.rebuild_columns();
+        }
+        self.show_state();
+    }
+
+    /// Writes the document back to the file it came from, and says whether it
+    /// managed to. A document with no file of its own has to be asked where to
+    /// go, and that answer arrives too late to report here.
+    fn save(&self) -> bool {
+        let file = self.imp().file.borrow().clone();
+        match file {
+            Some(file) => self.save_to(&file),
+            None => {
+                self.save_as();
+                false
+            }
+        }
+    }
+
+    fn save_to(&self, file: &gio::File) -> bool {
+        let Some(document) = self.imp().rows.document() else {
+            return false;
+        };
+
+        let bytes = document.borrow().to_bytes();
+        if let Err(error) = file.replace_contents(
+            &bytes,
+            None,
+            false,
+            gio::FileCreateFlags::NONE,
+            gio::Cancellable::NONE,
+        ) {
+            self.report(&gettext("Could Not Save the File"), &error.to_string());
+            return false;
+        }
+
+        document.borrow_mut().mark_saved();
+        self.imp().file.replace(Some(file.clone()));
+        self.show_folder(file);
+        self.show_state();
+        true
+    }
+
+    fn save_as(&self) {
+        let dialog = gtk::FileDialog::builder()
+            .title(gettext("Save File"))
+            .filters(&file_filters())
+            .modal(true)
+            .build();
+
+        if let Some(file) = self.imp().file.borrow().as_ref() {
+            dialog.set_initial_name(Some(&display_name(file)));
+            if let Some(folder) = file.parent() {
+                dialog.set_initial_folder(Some(&folder));
+            }
+        }
+
+        let window = self.clone();
+        dialog.save(
+            Some(self),
+            gio::Cancellable::NONE,
+            move |result| match result {
+                Ok(file) => {
+                    window.save_to(&file);
+                }
+                Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
+                Err(error) => {
+                    window.report(&gettext("Could Not Save the File"), &error.to_string())
+                }
+            },
+        );
+    }
+
+    fn is_modified(&self) -> bool {
+        self.imp()
+            .rows
+            .document()
+            .is_some_and(|document| document.borrow().is_modified())
+    }
+
+    /// Asks before anything unsaved is thrown away, then does `next`. With
+    /// nothing to lose there is nothing to ask, and `next` happens straight
+    /// away.
+    fn confirm_discard(&self, next: impl Fn(&Self) + 'static) {
+        if !self.is_modified() {
+            return next(self);
+        }
+
+        let message = gettext("“{}” has unsaved changes. Changes that are not saved will be lost.")
+            .replace("{}", &self.document_name());
+        let dialog = adw::AlertDialog::new(Some(&gettext("Save Changes?")), Some(&message));
+        dialog.add_response("cancel", &gettext("_Cancel"));
+        dialog.add_response("discard", &gettext("_Discard"));
+        dialog.add_response("save", &gettext("_Save"));
+        dialog.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+
+        let window = self.clone();
+        dialog.choose(Some(self), gio::Cancellable::NONE, move |response| {
+            match response.as_str() {
+                "discard" => next(&window),
+                // Nothing goes ahead on the strength of a save that did not
+                // happen.
+                "save" if window.save() => next(&window),
+                _ => {}
+            }
+        });
     }
 
     /// Puts the delimiter in front of the user rather than leaving it guessed
@@ -279,18 +485,57 @@ impl CommaWindow {
         self.set_action_state("delimiter", &id.to_variant());
     }
 
-    fn show_file_name(&self, file: &gio::File) {
-        let imp = self.imp();
-        let name = display_name(file);
+    /// What the window says about the document rather than shows of it: whether
+    /// it has unsaved changes, and which of Save, Undo and Redo have anything
+    /// to do.
+    fn show_state(&self) {
+        let (modified, undo, redo) = match self.imp().rows.document() {
+            Some(document) => {
+                let document = document.borrow();
+                (
+                    document.is_modified(),
+                    document.can_undo(),
+                    document.can_redo(),
+                )
+            }
+            None => (false, false, false),
+        };
 
-        imp.window_title.set_title(&name);
-        imp.window_title.set_subtitle(&folder_of(file));
-        self.set_title(Some(&name));
+        self.show_title(modified);
+        self.set_action_enabled("save", modified);
+        self.set_action_enabled("save-as", self.imp().rows.document().is_some());
+        self.set_action_enabled("undo", undo);
+        self.set_action_enabled("redo", redo);
     }
 
-    fn report_failure(&self, message: &str) {
-        let dialog =
-            adw::AlertDialog::new(Some(&gettext("Could Not Open the File")), Some(message));
+    /// The bullet in front of the name is what Apostrophe does, and what Comma
+    /// does for the same reason: it is the one part of the window that is
+    /// always on screen.
+    fn show_title(&self, modified: bool) {
+        let name = self.document_name();
+        let title = if modified {
+            format!("• {name}")
+        } else {
+            name
+        };
+
+        self.imp().window_title.set_title(&title);
+        self.set_title(Some(&title));
+    }
+
+    fn show_folder(&self, file: &gio::File) {
+        self.imp().window_title.set_subtitle(&folder_of(file));
+    }
+
+    fn document_name(&self) -> String {
+        match self.imp().file.borrow().as_ref() {
+            Some(file) => display_name(file),
+            None => gettext("Untitled"),
+        }
+    }
+
+    fn report(&self, title: &str, message: &str) {
+        let dialog = adw::AlertDialog::new(Some(title), Some(message));
         dialog.add_response("close", &gettext("_Close"));
         dialog.present(Some(self));
     }

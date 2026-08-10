@@ -12,6 +12,7 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
+mod cell;
 mod letters;
 mod model;
 mod row;
@@ -20,8 +21,9 @@ pub use letters::column_letter;
 pub use model::RowModel;
 pub use row::Row;
 
+use std::rc::Rc;
+
 use gtk::glib;
-use gtk::pango;
 use gtk::prelude::*;
 
 /// The width a data column gets before anyone drags it. Columns that size
@@ -31,12 +33,22 @@ const DEFAULT_COLUMN_WIDTH: i32 = 160;
 
 /// Rebuilds the view's columns: a row-number gutter wide enough for `rows`,
 /// then one column per title.
-pub fn set_columns(column_view: &gtk::ColumnView, titles: &[String], rows: usize) {
+///
+/// `commit` is called with a row, a column, and a value each time an edit
+/// finishes. The grid knows how to take a value from someone; what to do with
+/// it is not its business.
+pub fn set_columns(
+    column_view: &gtk::ColumnView,
+    titles: &[String],
+    rows: usize,
+    commit: impl Fn(usize, usize, String) + 'static,
+) {
     remove_all_columns(column_view);
     column_view.append_column(&gutter_column(rows));
 
+    let commit: Rc<cell::Commit> = Rc::new(commit);
     for (index, title) in titles.iter().enumerate() {
-        column_view.append_column(&data_column(index, title));
+        column_view.append_column(&data_column(index, title, commit.clone()));
     }
 }
 
@@ -53,18 +65,20 @@ fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
     let digits = rows.to_string().len() as i32;
 
     let factory = gtk::SignalListItemFactory::new();
-    factory.connect_setup(move |_, cell| {
+    factory.connect_setup(move |_, item| {
         let label = gtk::Label::builder()
             .xalign(1.0)
             .width_chars(digits)
             .css_classes(["dim-label", "numeric"])
             .build();
-        cell.downcast_ref::<gtk::ColumnViewCell>()
-            .expect("a column view factory is handed cells")
-            .set_child(Some(&label));
+        as_cell(item).set_child(Some(&label));
     });
-    factory.connect_bind(|_, cell| {
-        let (cell, label) = cell_and_label(cell);
+    factory.connect_bind(|_, item| {
+        let cell = as_cell(item);
+        let label = cell
+            .child()
+            .and_downcast::<gtk::Label>()
+            .expect("setup put a label here");
         let row = cell.item().and_downcast::<Row>().expect("rows hold Rows");
         label.set_text(&row.number().to_string());
     });
@@ -75,24 +89,13 @@ fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
         .build()
 }
 
-fn data_column(index: usize, title: &str) -> gtk::ColumnViewColumn {
+fn data_column(index: usize, title: &str, commit: Rc<cell::Commit>) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
-    factory.connect_setup(|_, cell| {
-        let label = gtk::Label::builder()
-            .xalign(0.0)
-            .ellipsize(pango::EllipsizeMode::End)
-            // Without this the label's own idea of how wide it wants to be
-            // wins and the column stops honouring its width.
-            .max_width_chars(1)
-            .build();
-        cell.downcast_ref::<gtk::ColumnViewCell>()
-            .expect("a column view factory is handed cells")
-            .set_child(Some(&label));
+    factory.connect_setup(move |_, item| {
+        cell::setup(as_cell(item), index, commit.clone());
     });
-    factory.connect_bind(move |_, cell| {
-        let (cell, label) = cell_and_label(cell);
-        let row = cell.item().and_downcast::<Row>().expect("rows hold Rows");
-        label.set_text(&row.value(index));
+    factory.connect_bind(move |_, item| {
+        cell::bind(as_cell(item), index);
     });
 
     gtk::ColumnViewColumn::builder()
@@ -103,14 +106,7 @@ fn data_column(index: usize, title: &str) -> gtk::ColumnViewColumn {
         .build()
 }
 
-fn cell_and_label(cell: &glib::Object) -> (gtk::ColumnViewCell, gtk::Label) {
-    let cell = cell
-        .downcast_ref::<gtk::ColumnViewCell>()
+fn as_cell(item: &glib::Object) -> &gtk::ColumnViewCell {
+    item.downcast_ref::<gtk::ColumnViewCell>()
         .expect("a column view factory is handed cells")
-        .clone();
-    let label = cell
-        .child()
-        .and_downcast::<gtk::Label>()
-        .expect("setup put a label here");
-    (cell, label)
 }

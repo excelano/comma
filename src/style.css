@@ -1,0 +1,28 @@
+/* Comma adds as little to the platform's styling as it can. What is here is
+ * what the platform has no opinion about, because a grid cell is not a widget
+ * GTK knows it is styling.
+ *
+ * Author: David M. Anderson
+ * Built with AI assistance (Claude, Anthropic)
+ */
+
+/* Where the keyboard is. GTK draws no focus ring around a plain box, and
+ * without one there is no telling which cell Enter would open. */
+.cell-content:focus {
+  outline: 2px solid @accent_color;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* A cell being edited. GtkText carries no frame of its own, so without this an
+ * edit in progress is indistinguishable from a cell nobody has touched. The
+ * frame alone would only repeat what the focus ring already says, so the tint
+ * carries the difference in lightness as well as in colour. The padding stays
+ * at zero so the text does not shift sideways at the moment the edit begins. */
+.cell-content > text {
+  padding: 0;
+  background-color: alpha(@accent_bg_color, 0.15);
+  box-shadow: inset 0 0 0 2px @accent_bg_color;
+  border-radius: 4px;
+  caret-color: @accent_color;
+}

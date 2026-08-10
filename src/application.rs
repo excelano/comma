@@ -5,6 +5,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gtk::gdk;
 use gtk::gio;
 use gtk::glib;
 
@@ -32,6 +33,11 @@ mod imp {
     }
 
     impl ApplicationImpl for CommaApplication {
+        fn startup(&self) {
+            self.parent_startup();
+            self.obj().load_styles();
+        }
+
         fn activate(&self) {
             let application = self.obj();
             let window = application
@@ -88,6 +94,25 @@ impl CommaApplication {
 
         self.set_accels_for_action("app.quit", &["<primary>q"]);
         self.set_accels_for_action("win.open", &["<primary>o"]);
+        self.set_accels_for_action("win.save", &["<primary>s"]);
+        self.set_accels_for_action("win.save-as", &["<primary><shift>s"]);
+        self.set_accels_for_action("win.undo", &["<primary>z"]);
+        self.set_accels_for_action("win.redo", &["<primary><shift>z", "<primary>y"]);
+    }
+
+    /// Comma's own styling, on top of whatever theme the desktop is wearing.
+    fn load_styles(&self) {
+        let Some(display) = gdk::Display::default() else {
+            return;
+        };
+
+        let provider = gtk::CssProvider::new();
+        provider.load_from_resource("/com/excelano/Comma/style.css");
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
     }
 
     fn show_about(&self) {
