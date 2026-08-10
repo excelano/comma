@@ -7,7 +7,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, pgettext};
 use gtk::gdk;
 use gtk::gio;
 use gtk::glib;
@@ -1397,13 +1397,20 @@ fn preset_id(dialect: Dialect) -> Option<&'static str> {
         .map(|(id, _)| *id)
 }
 
+/// What a delimiter is called on the button and in its menu.
+///
+/// Said in the context of delimiters, because in English the comma delimiter and
+/// the application share a word and in other languages they will not.
 fn preset_label(id: &str) -> String {
+    // Written out one by one rather than through a helper: what marks these for
+    // translation is the extractor seeing the words next to the context, and it
+    // cannot follow them through anything.
     match id {
-        "comma" => gettext("Comma"),
-        "tab" => gettext("Tab"),
-        "semicolon" => gettext("Semicolon"),
-        "pipe" => gettext("Pipe"),
-        "unit-separator" => gettext("ASCII Separators"),
+        "comma" => pgettext("delimiter", "Comma"),
+        "tab" => pgettext("delimiter", "Tab"),
+        "semicolon" => pgettext("delimiter", "Semicolon"),
+        "pipe" => pgettext("delimiter", "Pipe"),
+        "unit-separator" => pgettext("delimiter", "ASCII Separators"),
         other => other.to_string(),
     }
 }

@@ -17,6 +17,15 @@ use gettextrs::gettext;
 
 use crate::window::{CommaWindow, key_for_move};
 
+/// Marks a string as one to translate without translating it here.
+///
+/// These are written down long before there is a window to show them in, and a
+/// translation has to be looked up in the language in force at the moment it is
+/// read. This is what lets the extractor see them all the same.
+const fn translatable(text: &'static str) -> &'static str {
+    text
+}
+
 /// Where a row's key comes from.
 enum Key {
     /// The accelerator bound to an action.
@@ -29,34 +38,34 @@ enum Key {
 /// here; the keys are not.
 const GROUPS: [(&str, &[(&str, Key)]); 3] = [
     (
-        "File",
+        translatable("File"),
         &[
-            ("Open a File", Key::Accel("win.open")),
-            ("Save", Key::Accel("win.save")),
-            ("Save As", Key::Accel("win.save-as")),
-            ("Quit", Key::Accel("app.quit")),
+            (translatable("Open a File"), Key::Accel("win.open")),
+            (translatable("Save"), Key::Accel("win.save")),
+            (translatable("Save As"), Key::Accel("win.save-as")),
+            (translatable("Quit"), Key::Accel("app.quit")),
         ],
     ),
     (
-        "Editing",
+        translatable("Editing"),
         &[
-            ("Edit the Cell", Key::Move("edit")),
-            ("Undo", Key::Accel("win.undo")),
-            ("Redo", Key::Accel("win.redo")),
-            ("Find and Replace", Key::Accel("win.find")),
+            (translatable("Edit the Cell"), Key::Move("edit")),
+            (translatable("Undo"), Key::Accel("win.undo")),
+            (translatable("Redo"), Key::Accel("win.redo")),
+            (translatable("Find and Replace"), Key::Accel("win.find")),
         ],
     ),
     (
-        "Moving Around the Table",
+        translatable("Moving Around the Table"),
         &[
-            ("One Cell Up", Key::Move("up")),
-            ("One Cell Down", Key::Move("down")),
-            ("One Cell Left", Key::Move("left")),
-            ("One Cell Right", Key::Move("right")),
-            ("Start of the Row", Key::Move("row-start")),
-            ("End of the Row", Key::Move("row-end")),
-            ("Start of the File", Key::Move("start")),
-            ("End of the File", Key::Move("end")),
+            (translatable("One Cell Up"), Key::Move("up")),
+            (translatable("One Cell Down"), Key::Move("down")),
+            (translatable("One Cell Left"), Key::Move("left")),
+            (translatable("One Cell Right"), Key::Move("right")),
+            (translatable("Start of the Row"), Key::Move("row-start")),
+            (translatable("End of the Row"), Key::Move("row-end")),
+            (translatable("Start of the File"), Key::Move("start")),
+            (translatable("End of the File"), Key::Move("end")),
         ],
     ),
 ];
