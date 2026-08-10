@@ -32,12 +32,10 @@ pub(super) struct History {
 
 #[derive(Debug, Clone)]
 pub(super) enum Change {
-    /// One record's fields replaced by another set.
-    Fields {
-        row: usize,
-        before: Vec<Field>,
-        after: Vec<Field>,
-    },
+    /// Records whose fields were replaced by other fields. Usually one, from
+    /// typing in a cell; a replacement made across the file is many, and is one
+    /// thing to undo because it was one thing to ask for.
+    Fields { edits: Vec<Edit> },
     /// Records from `at` replaced by other records. Inserting is an empty
     /// `before` and deleting an empty `after`; a file whose last record ends
     /// without a terminator is neither, because gaining or losing a record
@@ -61,6 +59,14 @@ pub(super) enum Change {
     Order { order: Vec<usize> },
 }
 
+/// One record's fields as they were and as they are.
+#[derive(Debug, Clone)]
+pub(super) struct Edit {
+    pub row: usize,
+    pub before: Vec<Field>,
+    pub after: Vec<Field>,
+}
+
 /// How much of the file a change moved, which is as much as a view needs to
 /// know to draw it again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,13 +84,21 @@ impl Change {
     /// after to take it back.
     fn apply(&self, records: &mut Vec<Record>, forward: bool) -> Extent {
         match self {
-            Self::Fields { row, before, after } => {
-                records[*row].fields = if forward {
-                    after.clone()
-                } else {
-                    before.clone()
-                };
-                Extent::Record(*row)
+            Self::Fields { edits } => {
+                for edit in edits {
+                    records[edit.row].fields = if forward {
+                        edit.after.clone()
+                    } else {
+                        edit.before.clone()
+                    };
+                }
+                match edits.as_slice() {
+                    [edit] => Extent::Record(edit.row),
+                    // Several rows read differently now, and telling the view
+                    // about each of them one at a time is more work than
+                    // telling it to draw the lot.
+                    _ => Extent::Shape,
+                }
             }
             Self::Rows { at, before, after } => {
                 let (gone, come) = if forward {

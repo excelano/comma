@@ -36,11 +36,44 @@ template $CommaWindow: Adw.ApplicationWindow {
       }
 
       [end]
+      ToggleButton {
+        icon-name: "system-search-symbolic";
+        tooltip-text: _("Find and Replace");
+        action-name: "win.find";
+      }
+
+      [end]
       MenuButton dialect_button {
         visible: false;
         always-show-arrow: true;
         tooltip-text: _("How This File Is Read");
       }
+    }
+
+    [top]
+    SearchBar search_bar {
+      child: Box {
+        orientation: horizontal;
+        spacing: 6;
+
+        SearchEntry search_entry {
+          placeholder-text: _("Find");
+          hexpand: true;
+          width-chars: 12;
+        }
+
+        Entry replacement {
+          placeholder-text: _("Replace With");
+          hexpand: true;
+          width-chars: 12;
+        }
+
+        Button {
+          label: _("Replace _All");
+          use-underline: true;
+          action-name: "win.replace-all";
+        }
+      };
     }
 
     content: Stack stack {

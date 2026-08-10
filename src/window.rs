@@ -12,6 +12,7 @@ use gtk::gio;
 use gtk::glib;
 
 use comma::document::{Dialect, Document, Extent, sniff};
+use comma::search;
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
@@ -87,11 +88,21 @@ mod imp {
         pub column_view: TemplateChild<gtk::ColumnView>,
         #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub search_bar: TemplateChild<gtk::SearchBar>,
+        #[template_child]
+        pub search_entry: TemplateChild<gtk::SearchEntry>,
+        #[template_child]
+        pub replacement: TemplateChild<gtk::Entry>,
         pub rows: RowModel,
         /// The rows as the view has them, which is the document's rows put
-        /// through whatever the user has asked to see. Sorting is a view of the
-        /// file and changes nothing about it until it is asked to.
+        /// through whatever the user has asked to see. Hiding rows and putting
+        /// them in another order are views of the file and change nothing about
+        /// it until they are asked to.
+        pub shown: gtk::FilterListModel,
         pub sorted: gtk::SortListModel,
+        /// What is being searched for. Empty means nothing is.
+        pub needle: RefCell<String>,
         /// The file the document was read from, and the one Save writes back
         /// to.
         pub file: RefCell<Option<gio::File>>,
@@ -110,8 +121,13 @@ mod imp {
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
+                search_bar: TemplateChild::default(),
+                search_entry: TemplateChild::default(),
+                replacement: TemplateChild::default(),
                 rows: RowModel::default(),
+                shown: gtk::FilterListModel::default(),
                 sorted: gtk::SortListModel::default(),
+                needle: RefCell::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
                 settings: gio::Settings::new(APP_ID),
@@ -144,7 +160,11 @@ mod imp {
 
             // The grid shows every row and selects none: there is nothing yet
             // that acts on a selected row, and a highlight would promise one.
-            self.sorted.set_model(Some(&self.rows));
+            self.shown.set_model(Some(&self.rows));
+            // A search runs over every cell of the file, so it is spread across
+            // frames rather than done between one keystroke and the next.
+            self.shown.set_incremental(true);
+            self.sorted.set_model(Some(&self.shown));
             self.sorted.set_sorter(self.column_view.sorter().as_ref());
             self.column_view
                 .set_model(Some(&gtk::NoSelection::new(Some(self.sorted.clone()))));
@@ -160,6 +180,7 @@ mod imp {
             }
 
             self.dialect_button.set_menu_model(Some(&reading_menu()));
+            window.setup_search();
         }
     }
 
@@ -228,6 +249,25 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.step_history(Document::redo))
             .build();
 
+        let find = gio::ActionEntry::builder("find")
+            .state(false.to_variant())
+            .change_state(|window: &Self, action, state| {
+                let Some(state) = state else { return };
+                action.set_state(state);
+
+                if let Some(searching) = state.get::<bool>() {
+                    window.imp().search_bar.set_search_mode(searching);
+                    if searching {
+                        window.imp().search_entry.grab_focus();
+                    }
+                }
+            })
+            .build();
+
+        let replace_all = gio::ActionEntry::builder("replace-all")
+            .activate(|window: &Self, _, _| window.replace_all())
+            .build();
+
         let commit_order = gio::ActionEntry::builder("commit-order")
             .activate(|window: &Self, _, _| window.commit_order())
             .build();
@@ -264,6 +304,8 @@ impl CommaWindow {
             save_as,
             undo,
             redo,
+            find,
+            replace_all,
             commit_order,
             delimiter,
             header,
@@ -281,8 +323,109 @@ impl CommaWindow {
         for (name, _, _) in STRUCTURE {
             self.set_action_enabled(name, false);
         }
-        for name in ["save", "save-as", "undo", "redo", "commit-order"] {
+        for name in [
+            "save",
+            "save-as",
+            "undo",
+            "redo",
+            "commit-order",
+            "replace-all",
+        ] {
             self.set_action_enabled(name, false);
+        }
+    }
+
+    /// Searching hides the rows nothing matched in rather than walking a cursor
+    /// from one match to the next. In a table those are the same question
+    /// answered two ways, and the one that answers it all at once also shows
+    /// you what Replace All is about to change.
+    fn setup_search(&self) {
+        let imp = self.imp();
+
+        imp.search_bar.set_key_capture_widget(Some(self));
+        imp.shown
+            .set_filter(Some(&gtk::CustomFilter::new(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[upgrade_or]
+                true,
+                move |object| window.row_matches(object)
+            ))));
+
+        imp.search_entry.connect_search_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |entry| window.search_for(&entry.text())
+        ));
+
+        // Closing the search puts every row back. A file quietly missing rows
+        // because of a search nobody can see would be a lie about the file.
+        imp.search_bar
+            .connect_search_mode_enabled_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |bar| {
+                    window.set_action_state("find", &bar.is_search_mode().to_variant());
+                    if !bar.is_search_mode() {
+                        window.imp().search_entry.set_text("");
+                    }
+                }
+            ));
+    }
+
+    fn search_for(&self, needle: &str) {
+        self.imp().needle.replace(needle.to_string());
+
+        if let Some(filter) = self.imp().shown.filter() {
+            filter.changed(gtk::FilterChange::Different);
+        }
+        self.show_state();
+    }
+
+    fn row_matches(&self, object: &glib::Object) -> bool {
+        let imp = self.imp();
+        let needle = imp.needle.borrow();
+        if needle.is_empty() {
+            return true;
+        }
+
+        let (Some(row), Some(document)) = (object.downcast_ref::<Row>(), imp.rows.document())
+        else {
+            return true;
+        };
+        let document = document.borrow();
+        let row = row.index();
+
+        (0..document.field_count(row))
+            .any(|column| search::contains(document.value(row, column), &needle))
+    }
+
+    /// Replaces what is being searched for, in the rows the search is showing.
+    /// What you are looking at is what changes.
+    fn replace_all(&self) {
+        let imp = self.imp();
+        let needle = imp.needle.borrow().clone();
+        let Some(document) = imp.rows.document() else {
+            return;
+        };
+        if needle.is_empty() {
+            return;
+        }
+
+        let rows: Vec<usize> = imp
+            .sorted
+            .iter::<glib::Object>()
+            .flatten()
+            .filter_map(|object| object.downcast::<Row>().ok())
+            .map(|row| row.index())
+            .collect();
+
+        let replacement = imp.replacement.text();
+        let changed = document
+            .borrow_mut()
+            .replace_in(&rows, &needle, &replacement);
+        if changed > 0 {
+            self.reload();
         }
     }
 
@@ -739,7 +882,11 @@ impl CommaWindow {
         self.set_action_enabled("save-as", self.imp().rows.document().is_some());
         self.set_action_enabled("undo", undo);
         self.set_action_enabled("redo", redo);
-        self.set_action_enabled("commit-order", self.sorted_by().is_some());
+        let searching = !self.imp().needle.borrow().is_empty();
+        self.set_action_enabled("replace-all", searching);
+        // An order cannot be written down from a view that is not showing every
+        // row it would put in order.
+        self.set_action_enabled("commit-order", self.sorted_by().is_some() && !searching);
 
         self.show_reach();
     }

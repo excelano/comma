@@ -308,6 +308,89 @@ fn a_document_can_be_told_it_no_longer_matches_its_file() {
 }
 
 #[test]
+fn replacing_across_rows_is_one_thing_to_undo() {
+    let name = "plain.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    let changed = document.replace_in(&[0, 1, 2], "a", "@");
+
+    assert_eq!(changed, 4, "name, Ada, Grace, Arlington");
+    assert_eq!(
+        String::from_utf8(document.to_bytes()).unwrap(),
+        "id,n@me,city\n1,@d@,London\n2,Gr@ce,@rlington\n"
+    );
+
+    document.undo();
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+    assert!(
+        !document.can_undo(),
+        "three rows changed, one thing happened"
+    );
+}
+
+#[test]
+fn replacing_leaves_the_rows_it_was_not_given() {
+    let name = "odd-quoting.csv";
+    let original = String::from_utf8(read(name)).unwrap();
+    let mut document = load(name);
+
+    document.replace_in(&[0], "b", "B");
+
+    let written = String::from_utf8(document.to_bytes()).unwrap();
+    assert_eq!(written.lines().next().unwrap(), "a,B,c");
+    assert_eq!(
+        written.lines().nth(1).unwrap(),
+        original.lines().nth(1).unwrap()
+    );
+    assert_eq!(
+        written.lines().nth(2).unwrap(),
+        original.lines().nth(2).unwrap()
+    );
+}
+
+#[test]
+fn a_cell_nothing_matched_in_keeps_the_spelling_the_file_gave_it() {
+    // The second row of this file is `"plain","x"y,""`, none of which Comma
+    // would write that way. Replacing something that appears only in the first
+    // row must not rewrite the second on the way past.
+    let name = "odd-quoting.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    let changed = document.replace_in(&[0, 1, 2], "zzz", "!");
+
+    assert_eq!(changed, 0);
+    assert!(
+        !document.is_modified(),
+        "nothing matched, so nothing happened"
+    );
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+}
+
+#[test]
+fn replacing_matches_whatever_case_the_file_wrote_it_in() {
+    let mut document = load("plain.csv");
+
+    document.replace_in(&[1], "ADA", "Lovelace");
+
+    assert_eq!(document.value(1, 1), "Lovelace");
+}
+
+#[test]
+fn a_replaced_value_is_quoted_only_if_it_has_to_be() {
+    let mut document = load("plain.csv");
+
+    document.replace_in(&[1], "ada", "Lovelace, Ada");
+
+    let written = String::from_utf8(document.to_bytes()).unwrap();
+    assert_eq!(
+        written.lines().nth(1).unwrap(),
+        r#"1,"Lovelace, Ada",London"#
+    );
+}
+
+#[test]
 fn every_corpus_file_survives_an_edit_and_a_reload() {
     for name in [
         "plain.csv",

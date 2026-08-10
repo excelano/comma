@@ -29,7 +29,9 @@ pub use sniff::sniff;
 
 use std::fmt;
 
-use history::{Change, History};
+use history::{Change, Edit, History};
+
+use crate::search;
 
 const BYTE_ORDER_MARK: &[u8] = &[0xEF, 0xBB, 0xBF];
 
@@ -209,8 +211,56 @@ impl Document {
             return;
         }
 
+        let edit = self.edit(row, column, value);
+        self.commit(Change::Fields { edits: vec![edit] });
+    }
+
+    /// Replaces every occurrence of `find` with `with`, in the given rows only,
+    /// and says how many cells changed. One thing to undo, because it was one
+    /// thing to ask for.
+    ///
+    /// A cell nothing matched in is not written to at all, so it keeps whatever
+    /// spelling the file gave it.
+    pub fn replace_in(&mut self, rows: &[usize], find: &str, with: &str) -> usize {
+        let mut edits = Vec::new();
+        let mut changed = 0;
+
+        // One edit per record rather than per cell: an edit carries the whole
+        // record, so two of them for the same record would each undo the other.
+        for &row in rows {
+            let before = self.records[row].fields.clone();
+            let mut after = before.clone();
+            let touched = after.iter_mut().fold(0, |touched, field| {
+                match search::replace(&field.value, find, with) {
+                    Some(replaced) => {
+                        *field = Field {
+                            value: replaced,
+                            verbatim: None,
+                        };
+                        touched + 1
+                    }
+                    None => touched,
+                }
+            });
+
+            if touched > 0 {
+                changed += touched;
+                edits.push(Edit { row, before, after });
+            }
+        }
+
+        if changed > 0 {
+            self.commit(Change::Fields { edits });
+        }
+        changed
+    }
+
+    /// One record's fields as they are, and as they would be with one cell set
+    /// to `value`. Nothing is changed here; the change is what is returned.
+    fn edit(&self, row: usize, column: usize, value: String) -> Edit {
         let before = self.records[row].fields.clone();
         let mut after = before.clone();
+
         while after.len() <= column {
             after.push(Field::blank());
         }
@@ -221,7 +271,7 @@ impl Document {
             verbatim: None,
         };
 
-        self.commit(Change::Fields { row, before, after });
+        Edit { row, before, after }
     }
 
     /// Puts an empty record at `at`, which may be the end of the file.
