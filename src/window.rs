@@ -58,11 +58,16 @@ pub struct Cursor {
 /// These are bound to the grid rather than to the window, so that the arrow keys
 /// belong to the search box while the search box has the focus, and to the table
 /// the rest of the time.
-const MOVES: [(&str, &str); 11] = [
+const MOVES: [(&str, &str); 13] = [
     ("up", "Up"),
     ("down", "Down"),
     ("left", "Left"),
     ("right", "Right"),
+    // Tab crosses the table and then wraps, as it does in a spreadsheet, and at
+    // either end of the file it gives up and leaves — a table nothing can tab
+    // out of is a trap for anyone working without a mouse.
+    ("next", "Tab"),
+    ("previous", "<shift>Tab"),
     ("row-start", "Home"),
     ("row-end", "End"),
     ("start", "<primary>Home"),
@@ -165,6 +170,8 @@ mod imp {
         #[template_child]
         pub column_view: TemplateChild<gtk::ColumnView>,
         #[template_child]
+        pub open_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub search_bar: TemplateChild<gtk::SearchBar>,
@@ -201,6 +208,7 @@ mod imp {
                 window_title: TemplateChild::default(),
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
+                open_button: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
                 search_bar: TemplateChild::default(),
                 search_entry: TemplateChild::default(),
@@ -464,20 +472,38 @@ impl CommaWindow {
     /// something else does.
     fn setup_navigation(&self) {
         let keys = gtk::ShortcutController::new();
-        // After the widget with the focus has had its say: while a cell is open
-        // for typing, the arrow keys and Home and End are the entry's.
-        keys.set_propagation_phase(gtk::PropagationPhase::Bubble);
+        // Before the widgets inside the table have their say, because the column
+        // view binds Home, End and Tab itself and means different things by them
+        // than a table of cells does.
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
 
         for (how, key) in MOVES {
             let Some(trigger) = gtk::ShortcutTrigger::parse_string(key) else {
                 continue;
             };
-            let shortcut = gtk::Shortcut::builder()
-                .trigger(&trigger)
-                .action(&gtk::NamedAction::new("win.move-cursor"))
-                .arguments(&how.to_variant())
-                .build();
-            keys.add_shortcut(shortcut);
+
+            // Declining a key rather than always taking it is what lets a cell
+            // that is open for typing keep the keys that belong to typing.
+            let action = gtk::CallbackAction::new(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[upgrade_or]
+                glib::Propagation::Proceed,
+                move |_, _| {
+                    if window.typing() {
+                        return glib::Propagation::Proceed;
+                    }
+                    window.move_cursor(how);
+                    glib::Propagation::Stop
+                }
+            ));
+
+            keys.add_shortcut(
+                gtk::Shortcut::builder()
+                    .trigger(&trigger)
+                    .action(&action)
+                    .build(),
+            );
         }
 
         self.imp().column_view.add_controller(keys);
@@ -490,6 +516,10 @@ impl CommaWindow {
     fn setup_search(&self) {
         let imp = self.imp();
 
+        // Without this the bar and its box are two unrelated widgets: typing
+        // with the table focused would not reach the search, and Escape would
+        // not close it.
+        imp.search_bar.connect_entry(&*imp.search_entry);
         imp.search_bar.set_key_capture_widget(Some(self));
         imp.shown
             .set_filter(Some(&gtk::CustomFilter::new(glib::clone!(
@@ -1016,10 +1046,30 @@ impl CommaWindow {
             "row-end" => (cursor.position, last_column),
             "start" => (0, 0),
             "end" => (last_row, last_column),
+            "next" if cursor.column < last_column => (cursor.position, cursor.column + 1),
+            "next" if cursor.position < last_row => (cursor.position + 1, 0),
+            "previous" if cursor.column > 0 => (cursor.position, cursor.column - 1),
+            "previous" if cursor.position > 0 => (cursor.position - 1, last_column),
+            // Off the end of the table in either direction, which is the one
+            // way out of it.
+            "next" | "previous" => return self.leave_table(),
             _ => return,
         };
 
         self.go_to(position, column);
+    }
+
+    /// Takes the keyboard out of the table, to the first thing in the window
+    /// that is not part of it.
+    fn leave_table(&self) {
+        self.imp().open_button.grab_focus();
+    }
+
+    /// Whether a cell is open for typing, in which case the keys that move
+    /// around the table are the entry's: Home and End move the caret through
+    /// what is being typed rather than moving to another cell.
+    fn typing(&self) -> bool {
+        gtk::prelude::RootExt::focus(self).is_some_and(|widget| widget.is::<gtk::Text>())
     }
 
     /// Puts the cursor, and the keyboard with it, on one cell of the table.
