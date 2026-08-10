@@ -17,7 +17,7 @@ use comma::search;
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
-use crate::grid::{self, Event, Row, RowModel};
+use crate::grid::{self, Edited, Row, RowModel};
 use crate::pdf;
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
@@ -37,6 +37,40 @@ type Operation = fn(&mut Document, usize, usize);
 /// The exports, so there is one list of what needs a document open to be worth
 /// offering.
 const EXPORTS: [&str; 3] = ["export-pdf", "export-html", "export-ods"];
+
+/// Where the keyboard is in the grid.
+///
+/// A row is held twice over because the two are asked different questions.
+/// `position` is where the row sits in the view and is what moving up or down
+/// counts in; `row` is where it sits in the file and is what a change to the
+/// document is addressed by. A sort or a search makes them differ.
+#[derive(Debug, Clone, Copy)]
+pub struct Cursor {
+    pub position: u32,
+    pub row: usize,
+    pub column: usize,
+}
+
+/// How the keyboard moves around the grid, and the keys that ask for it.
+///
+/// These are bound to the grid rather than to the window, so that the arrow keys
+/// belong to the search box while the search box has the focus, and to the table
+/// the rest of the time.
+const MOVES: [(&str, &str); 11] = [
+    ("up", "Up"),
+    ("down", "Down"),
+    ("left", "Left"),
+    ("right", "Right"),
+    ("row-start", "Home"),
+    ("row-end", "End"),
+    ("start", "<primary>Home"),
+    ("end", "<primary>End"),
+    // The one key that both moves and does something: Enter opens the cell it
+    // is on, and opening a cell that is already open is what commits it.
+    ("edit", "Return"),
+    ("edit", "KP_Enter"),
+    ("edit", "F2"),
+];
 
 /// What Comma can write that it will not read back. Each is output: never
 /// reopened, never offered as Save, and never the document.
@@ -143,7 +177,7 @@ mod imp {
         /// the document. Rows and columns are added and removed here. It
         /// outlives the focus that set it, so that reaching for a menu does not
         /// count as pointing somewhere else.
-        pub current: Cell<Option<(usize, usize)>>,
+        pub current: Cell<Option<Cursor>>,
         pub settings: gio::Settings,
     }
 
@@ -214,6 +248,8 @@ mod imp {
 
             self.dialect_button.set_menu_model(Some(&reading_menu()));
             window.setup_search();
+            window.setup_navigation();
+            window.watch_focus();
         }
     }
 
@@ -311,6 +347,15 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.export(Format::Ods))
             .build();
 
+        let move_cursor = gio::ActionEntry::builder("move-cursor")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(|window: &Self, _, param| {
+                if let Some(how) = param.and_then(|p| p.get::<String>()) {
+                    window.move_cursor(&how);
+                }
+            })
+            .build();
+
         let commit_order = gio::ActionEntry::builder("commit-order")
             .activate(|window: &Self, _, _| window.commit_order())
             .build();
@@ -349,6 +394,7 @@ impl CommaWindow {
             redo,
             find,
             replace_all,
+            move_cursor,
             export_pdf,
             export_html,
             export_ods,
@@ -379,6 +425,30 @@ impl CommaWindow {
         ] {
             self.set_action_enabled(name, false);
         }
+    }
+
+    /// The keys that move around the table, bound to the table rather than to
+    /// the window so that they belong to whatever else has the focus when
+    /// something else does.
+    fn setup_navigation(&self) {
+        let keys = gtk::ShortcutController::new();
+        // After the widget with the focus has had its say: while a cell is open
+        // for typing, the arrow keys and Home and End are the entry's.
+        keys.set_propagation_phase(gtk::PropagationPhase::Bubble);
+
+        for (how, key) in MOVES {
+            let Some(trigger) = gtk::ShortcutTrigger::parse_string(key) else {
+                continue;
+            };
+            let shortcut = gtk::Shortcut::builder()
+                .trigger(&trigger)
+                .action(&gtk::NamedAction::new("win.move-cursor"))
+                .arguments(&how.to_variant())
+                .build();
+            keys.add_shortcut(shortcut);
+        }
+
+        self.imp().column_view.add_controller(keys);
     }
 
     /// Searching hides the rows nothing matched in rather than walking a cursor
@@ -606,7 +676,7 @@ impl CommaWindow {
             glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |row, column, event| window.cell_said(row, column, event)
+                move |edit| window.cell_edited(edit)
             ),
         );
 
@@ -638,22 +708,39 @@ impl CommaWindow {
             .collect()
     }
 
-    fn cell_said(&self, row: usize, column: usize, event: Event) {
-        match event {
-            Event::Focused => {
-                self.imp().current.set(Some((row, column)));
-                self.show_reach();
-            }
-            // The document decides whether what was typed is a change at all:
-            // retyping a value leaves the file exactly as it was.
-            Event::Edited(value) => {
-                let Some(document) = self.imp().rows.document() else {
-                    return;
-                };
-                document.borrow_mut().set_value(row, column, value);
-                self.show_state();
-            }
+    /// Takes what was typed into a cell. The document decides whether that is a
+    /// change at all: retyping a value leaves the file exactly as it was.
+    fn cell_edited(&self, edit: Edited) {
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+        document
+            .borrow_mut()
+            .set_value(edit.row, edit.column, edit.value);
+        self.show_state();
+
+        if edit.moving_on {
+            // Enter finished the edit, so it also asks for the row below:
+            // filling a column downwards is then one key per cell.
+            self.move_cursor("down");
         }
+    }
+
+    /// Follows the keyboard around the grid. Where it is decides what a row or
+    /// column operation happens to and what moving does next, and the only place
+    /// that knows is the window: the cells are recycled underneath it.
+    fn watch_focus(&self) {
+        self.connect_focus_widget_notify(|window| {
+            let Some(cell) = window.focused_cell() else {
+                return;
+            };
+            window.imp().current.set(Some(Cursor {
+                position: cell.position(),
+                row: cell.row(),
+                column: cell.column(),
+            }));
+            window.show_reach();
+        });
     }
 
     /// Writes the order the grid is showing into the file. Sorting is a view of
@@ -852,14 +939,111 @@ impl CommaWindow {
     /// to: rows and columns the current cell outlived are no longer there.
     fn current_cell(&self) -> Option<(usize, usize)> {
         let document = self.imp().rows.document()?;
-        let (row, column) = self.imp().current.get()?;
+        let cursor = self.imp().current.get()?;
 
         let document = document.borrow();
         let (rows, columns) = (document.row_count(), document.column_count());
         if rows == 0 || columns == 0 {
             return None;
         }
-        Some((row.min(rows - 1), column.min(columns - 1)))
+        Some((cursor.row.min(rows - 1), cursor.column.min(columns - 1)))
+    }
+
+    /// Moves the keyboard to another cell, or opens the one it is on.
+    ///
+    /// Moving is done by asking the view to scroll somewhere and take the focus
+    /// with it, which is the one way that works whether or not the cell being
+    /// moved to has been drawn yet.
+    fn move_cursor(&self, how: &str) {
+        let imp = self.imp();
+        let Some(cursor) = imp.current.get() else {
+            return;
+        };
+        if how == "edit" {
+            self.edit_cell();
+            return;
+        }
+
+        let rows = imp.sorted.n_items();
+        let columns = imp.column_view.columns().n_items().saturating_sub(1);
+        if rows == 0 || columns == 0 {
+            return;
+        }
+        let (last_row, last_column) = (rows - 1, columns as usize - 1);
+
+        let (position, column) = match how {
+            "up" => (cursor.position.saturating_sub(1), cursor.column),
+            "down" => ((cursor.position + 1).min(last_row), cursor.column),
+            "left" => (cursor.position, cursor.column.saturating_sub(1)),
+            "right" => (cursor.position, (cursor.column + 1).min(last_column)),
+            "row-start" => (cursor.position, 0),
+            "row-end" => (cursor.position, last_column),
+            "start" => (0, 0),
+            "end" => (last_row, last_column),
+            _ => return,
+        };
+
+        let Some(target) = imp
+            .column_view
+            .columns()
+            .item(column as u32 + 1)
+            .and_downcast::<gtk::ColumnViewColumn>()
+        else {
+            return;
+        };
+        // The cursor moves whether or not the keyboard can follow it there yet,
+        // so that moving twice in a row lands where two moves should.
+        if let Some(row) = imp
+            .sorted
+            .item(position)
+            .and_downcast::<Row>()
+            .map(|row| row.index())
+        {
+            imp.current.set(Some(Cursor {
+                position,
+                row,
+                column,
+            }));
+        }
+
+        imp.column_view
+            .scroll_to(position, Some(&target), gtk::ListScrollFlags::empty(), None);
+        if !grid::focus_cell(&imp.column_view, position, column) {
+            // That row has not been drawn yet. It will have been once the
+            // scrolling above has happened, which is the next turn of the loop.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || {
+                    grid::focus_cell(&window.imp().column_view, position, column);
+                }
+            ));
+        }
+        self.show_reach();
+    }
+
+    /// Opens the cell the keyboard is on for typing.
+    fn edit_cell(&self) {
+        if let Some(cell) = self.focused_cell() {
+            cell.begin();
+        }
+    }
+
+    /// The cell the keyboard is in, wherever inside it the focus has landed.
+    ///
+    /// Focus sits on the table's own cell widget while a cell is merely current,
+    /// and on the entry inside ours while one is being typed in, so the answer
+    /// is looked for in both directions.
+    fn focused_cell(&self) -> Option<grid::Cell> {
+        let focused = gtk::prelude::RootExt::focus(self)?;
+
+        if let Some(cell) = focused.downcast_ref::<grid::Cell>() {
+            return Some(cell.clone());
+        }
+        if let Some(cell) = focused.ancestor(grid::Cell::static_type()) {
+            return cell.downcast().ok();
+        }
+        focused.first_child().and_downcast::<grid::Cell>()
     }
 
     fn step_history(&self, step: fn(&mut Document) -> Option<Extent>) {

@@ -18,6 +18,7 @@ mod model;
 mod order;
 mod row;
 
+pub use cell::Cell;
 pub use letters::column_letter;
 pub use model::RowModel;
 pub use row::Row;
@@ -32,26 +33,26 @@ use gtk::prelude::*;
 /// are realised, which reads as the grid shifting under the pointer.
 const DEFAULT_COLUMN_WIDTH: i32 = 160;
 
-/// What a cell says about itself. The grid knows how to show a value and how to
-/// take a new one; what any of that means is not its business.
-pub enum Event {
-    /// The cell has the keyboard focus, and so is where the next thing the user
-    /// asks for is to happen.
-    Focused,
-    /// An edit finished, leaving this value behind.
-    Edited(String),
+/// An edit that finished. The grid knows how to take a value from someone; what
+/// to do with it is not its business.
+pub struct Edited {
+    pub row: usize,
+    pub column: usize,
+    pub value: String,
+    /// True when Enter finished the edit rather than the focus simply going
+    /// somewhere else.
+    pub moving_on: bool,
 }
 
 /// Rebuilds the view's columns: a row-number gutter wide enough for `rows`,
 /// then one column per title.
 ///
-/// `report` is called with a row, a column, and whatever the cell there has to
-/// say.
+/// `report` is called each time an edit finishes.
 pub fn set_columns(
     column_view: &gtk::ColumnView,
     titles: &[String],
     rows: usize,
-    report: impl Fn(usize, usize, Event) + 'static,
+    report: impl Fn(Edited) + 'static,
 ) {
     remove_all_columns(column_view);
     column_view.append_column(&gutter_column(rows));
@@ -60,6 +61,36 @@ pub fn set_columns(
     for (index, title) in titles.iter().enumerate() {
         column_view.append_column(&data_column(index, title, report.clone()));
     }
+}
+
+/// Puts the keyboard on one cell of the table, if that cell has been drawn.
+///
+/// Only the cells on screen exist; the rest are made as they scroll into view.
+/// So this says whether it found one, and a caller that has just asked the view
+/// to scroll somewhere can ask again once it has.
+pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -> bool {
+    match find_cell(column_view.clone().upcast(), position, column) {
+        Some(cell) => cell.grab_focus(),
+        None => false,
+    }
+}
+
+fn find_cell(widget: gtk::Widget, position: u32, column: usize) -> Option<Cell> {
+    if let Some(cell) = widget.downcast_ref::<Cell>()
+        && cell.position() == position
+        && cell.column() == column
+    {
+        return Some(cell.clone());
+    }
+
+    let mut child = widget.first_child();
+    while let Some(current) = child {
+        child = current.next_sibling();
+        if let Some(cell) = find_cell(current, position, column) {
+            return Some(cell);
+        }
+    }
+    None
 }
 
 fn remove_all_columns(column_view: &gtk::ColumnView) {
@@ -104,8 +135,9 @@ fn data_column(index: usize, title: &str, report: Rc<cell::Report>) -> gtk::Colu
     factory.connect_setup(move |_, item| {
         cell::setup(as_cell(item), index, report.clone());
     });
+    let heading = title.to_string();
     factory.connect_bind(move |_, item| {
-        cell::bind(as_cell(item), index);
+        cell::bind(as_cell(item), index, &heading);
     });
 
     gtk::ColumnViewColumn::builder()

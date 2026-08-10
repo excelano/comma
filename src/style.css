@@ -19,7 +19,7 @@
  * frame alone would only repeat what the focus ring already says, so the tint
  * carries the difference in lightness as well as in colour. The padding stays
  * at zero so the text does not shift sideways at the moment the edit begins. */
-.cell-content > text {
+.cell-content text {
   padding: 0;
   background-color: alpha(@accent_bg_color, 0.15);
   box-shadow: inset 0 0 0 2px @accent_bg_color;
