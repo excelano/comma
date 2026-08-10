@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Placeholder symbolic icon. Author: David M. Anderson. -->
+<!-- The same mark at sixteen pixels, in one flat shape.
+
+     A symbolic icon is recoloured by whatever draws it, so it carries no colour
+     of its own and no gradient. There is no sheet behind it either: at this size
+     a border and a mark inside it become a grey smudge, and the comma alone
+     still reads.
+
+     Author: David M. Anderson
+     Built with AI assistance (Claude, Anthropic) -->
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <path d="M8 2.5c2.6 0 4.4 1.9 4.4 4.5 0 3.7-2.5 6.1-5.7 7.3l-1.2-2c2-0.8 3.2-2 3.6-3.4-0.2 0.2-0.6 0.2-1.2 0.2-2.4 0-4.2-1.6-4.2-4C3.7 4.4 5.5 2.5 8 2.5z" fill="#222222"/>
+  <path fill="#000000"
+        d="M8 1.6c3.1 0 5.2 2.3 5.2 5.4 0 4.4-2.9 7.2-6.7 8.6l-1.4-2.4c2.3-1 3.7-2.4 4.2-4.1-0.2 0.2-0.7 0.3-1.4 0.3-2.8 0-4.9-2-4.9-4.8C3 3.9 5.1 1.6 8 1.6z"/>
 </svg>
