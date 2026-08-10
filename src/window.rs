@@ -1160,9 +1160,9 @@ impl CommaWindow {
 
     /// The cell the keyboard is in, wherever inside it the focus has landed.
     ///
-    /// Focus sits on the table's own cell widget while a cell is merely current,
-    /// and on the entry inside ours while one is being typed in, so the answer
-    /// is looked for in both directions.
+    /// Focus sits on the entry inside a cell while one is being typed in, and on
+    /// a whole row of the table on the way in from the toolbar, so the answer is
+    /// looked for above and below whatever has it.
     fn focused_cell(&self) -> Option<grid::Cell> {
         let focused = gtk::prelude::RootExt::focus(self)?;
 
@@ -1172,7 +1172,10 @@ impl CommaWindow {
         if let Some(cell) = focused.ancestor(grid::Cell::static_type()) {
             return cell.downcast().ok();
         }
-        focused.first_child().and_downcast::<grid::Cell>()
+        // Tabbing into the table lands on a whole row rather than on any one of
+        // its cells, and a row the keyboard is on is somewhere: the first cell
+        // in it, rather than nowhere at all.
+        grid::cell_within(&focused)
     }
 
     fn step_history(&self, step: fn(&mut Document) -> Option<Extent>) {

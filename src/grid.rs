@@ -75,6 +75,23 @@ pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -
     }
 }
 
+/// The first cell anywhere inside a widget, for when the keyboard has landed on
+/// something that holds cells rather than on one of them.
+pub fn cell_within(widget: &gtk::Widget) -> Option<Cell> {
+    if let Some(cell) = widget.downcast_ref::<Cell>() {
+        return Some(cell.clone());
+    }
+
+    let mut child = widget.first_child();
+    while let Some(current) = child {
+        child = current.next_sibling();
+        if let Some(cell) = cell_within(&current) {
+            return Some(cell);
+        }
+    }
+    None
+}
+
 fn find_cell(widget: gtk::Widget, position: u32, column: usize) -> Option<Cell> {
     if let Some(cell) = widget.downcast_ref::<Cell>()
         && cell.position() == position
