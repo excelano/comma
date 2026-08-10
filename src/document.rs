@@ -80,9 +80,11 @@ impl fmt::Display for LoadError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotUtf8 { valid_up_to } => {
+                // Sentence case, because this message is shown to a person
+                // rather than composed into a chain of other errors.
                 write!(
                     formatter,
-                    "this file is not valid UTF-8 text (the first byte Comma could not read is at offset {valid_up_to})"
+                    "This file is not valid UTF-8 text. The first byte Comma could not read is at offset {valid_up_to}."
                 )
             }
         }

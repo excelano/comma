@@ -39,6 +39,23 @@ mod imp {
                 .unwrap_or_else(|| CommaWindow::new(&application).upcast());
             window.present();
         }
+
+        /// Files named on the command line, or handed over by the file manager.
+        /// A window holds one document, so each file gets one.
+        fn open(&self, files: &[gio::File], _hint: &str) {
+            let application = self.obj();
+            for file in files {
+                let window = CommaWindow::new(&application);
+                window.present();
+
+                // Reading waits for the next turn of the main loop. A file
+                // that will not open says so in a dialog, and a dialog
+                // presented in the same turn that asked for the window is
+                // never seen.
+                let file = file.clone();
+                glib::idle_add_local_once(move || window.open_file(&file));
+            }
+        }
     }
 
     impl GtkApplicationImpl for CommaApplication {}
@@ -56,6 +73,7 @@ impl CommaApplication {
         glib::Object::builder()
             .property("application-id", APP_ID)
             .property("resource-base-path", "/com/excelano/Comma")
+            .property("flags", gio::ApplicationFlags::HANDLES_OPEN)
             .build()
     }
 
@@ -69,6 +87,7 @@ impl CommaApplication {
         self.add_action_entries([quit, about]);
 
         self.set_accels_for_action("app.quit", &["<primary>q"]);
+        self.set_accels_for_action("win.open", &["<primary>o"]);
     }
 
     fn show_about(&self) {

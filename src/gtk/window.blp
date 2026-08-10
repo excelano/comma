@@ -7,6 +7,18 @@ template $CommaWindow: Adw.ApplicationWindow {
   content: Adw.ToolbarView {
     [top]
     Adw.HeaderBar {
+      title-widget: Adw.WindowTitle window_title {
+        title: _("Comma");
+      };
+
+      [start]
+      Button {
+        label: _("_Open");
+        use-underline: true;
+        action-name: "win.open";
+        tooltip-text: _("Open a File");
+      }
+
       [end]
       MenuButton {
         primary: true;
@@ -16,15 +28,55 @@ template $CommaWindow: Adw.ApplicationWindow {
       }
     }
 
-    content: Adw.StatusPage {
-      icon-name: "com.excelano.Comma-symbolic";
-      title: _("No File Open");
-      description: _("Comma edits CSV, TSV, and other delimited text files.");
+    content: Stack stack {
+      StackPage {
+        name: "empty";
+
+        child: Adw.StatusPage {
+          icon-name: "com.excelano.Comma-symbolic";
+          title: _("No File Open");
+          description: _("Comma edits CSV, TSV, and other delimited text files.");
+
+          child: Button {
+            label: _("_Open File…");
+            use-underline: true;
+            action-name: "win.open";
+            halign: center;
+
+            styles [
+              "pill",
+              "suggested-action",
+            ]
+          };
+        };
+      }
+
+      StackPage {
+        name: "grid";
+
+        child: ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+
+          child: ColumnView column_view {
+            show-row-separators: true;
+            show-column-separators: true;
+            reorderable: false;
+          };
+        };
+      }
     };
   };
 }
 
 menu primary_menu {
+  section {
+    item {
+      label: _("_Open…");
+      action: "win.open";
+    }
+  }
+
   section {
     item {
       label: _("_About Comma");
