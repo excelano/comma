@@ -155,6 +155,14 @@ impl CommaWindow {
             .collect()
     }
 
+    /// Whether the grid is showing the file the way the file is: every row, in
+    /// the order the file holds them. A sort and a search each make it show
+    /// something else, and the operations that name a place next to a row have
+    /// nothing to name while they do.
+    pub(super) fn showing_file_order(&self) -> bool {
+        self.sorted_by().is_none() && self.imp().needle.borrow().is_empty()
+    }
+
     /// Which data column the grid is sorted by, and which way, when it is
     /// sorted by one at all.
     pub(super) fn sorted_by(&self) -> Option<(usize, gtk::SortType)> {

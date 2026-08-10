@@ -64,6 +64,18 @@ struct Operation {
     /// been taken out of has none to point at, and would otherwise be a file no
     /// row could ever be put back into.
     needs_cell: bool,
+    /// Whether it names a place next to another row rather than the row itself,
+    /// which only means something while the grid is showing the file in the
+    /// file's own order.
+    ///
+    /// Above and below are the two words a sort or a search takes the meaning
+    /// out of. Sorted, the row a new one is put next to is somewhere else on
+    /// screen, and a blank row sorts to whichever end blanks go to rather than
+    /// to where it was asked for. Searched, it does not match and is not shown
+    /// at all. Deleting a row survives both, because "this row" means the same
+    /// thing in any order, and so do all the columns, which nothing here sorts
+    /// or hides.
+    needs_file_order: bool,
 }
 
 const STRUCTURE: [Operation; 6] = [
@@ -73,6 +85,7 @@ const STRUCTURE: [Operation; 6] = [
         axis: Axis::Row,
         change: |document, row| document.insert_row(row),
         needs_cell: false,
+        needs_file_order: true,
     },
     Operation {
         name: "insert-row-below",
@@ -82,6 +95,7 @@ const STRUCTURE: [Operation; 6] = [
         // file with no rows is the same place.
         change: |document, row| document.insert_row((row + 1).min(document.row_count())),
         needs_cell: false,
+        needs_file_order: true,
     },
     Operation {
         name: "delete-row",
@@ -89,6 +103,7 @@ const STRUCTURE: [Operation; 6] = [
         axis: Axis::Row,
         change: |document, row| document.delete_row(row),
         needs_cell: true,
+        needs_file_order: false,
     },
     Operation {
         name: "insert-column-before",
@@ -96,6 +111,7 @@ const STRUCTURE: [Operation; 6] = [
         axis: Axis::Column,
         change: |document, column| document.insert_column(column),
         needs_cell: true,
+        needs_file_order: false,
     },
     Operation {
         name: "insert-column-after",
@@ -103,6 +119,7 @@ const STRUCTURE: [Operation; 6] = [
         axis: Axis::Column,
         change: |document, column| document.insert_column(column + 1),
         needs_cell: true,
+        needs_file_order: false,
     },
     Operation {
         name: "delete-column",
@@ -110,6 +127,7 @@ const STRUCTURE: [Operation; 6] = [
         axis: Axis::Column,
         change: |document, column| document.delete_column(column),
         needs_cell: true,
+        needs_file_order: false,
     },
 ];
 
@@ -663,6 +681,12 @@ impl CommaWindow {
             return;
         };
 
+        // The action stays reachable from the session bus whatever the menus
+        // are showing, so what the menus refuse is refused here too.
+        if operation.needs_file_order && !self.showing_file_order() {
+            return;
+        }
+
         let index = match (usize::try_from(at), self.current_cell()) {
             (Ok(index), _) => index,
             (Err(_), Some((row, column))) => match operation.axis {
@@ -731,9 +755,11 @@ impl CommaWindow {
     fn show_reach(&self) {
         let cell = self.current_cell().is_some();
         let document = self.imp().rows.document().is_some();
+        let file_order = self.showing_file_order();
         for operation in STRUCTURE {
-            let reachable = if operation.needs_cell { cell } else { document };
-            self.set_action_enabled(operation.name, reachable);
+            let somewhere = if operation.needs_cell { cell } else { document };
+            let meaningful = file_order || !operation.needs_file_order;
+            self.set_action_enabled(operation.name, somewhere && meaningful);
         }
     }
 
