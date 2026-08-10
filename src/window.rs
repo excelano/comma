@@ -12,11 +12,13 @@ use gtk::gio;
 use gtk::glib;
 
 use comma::document::{Dialect, Document, Extent, sniff};
+use comma::export::{self, Sheet};
 use comma::search;
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
 use crate::grid::{self, Event, Row, RowModel};
+use crate::pdf;
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
 /// about a delimiter — its menu entry, its button label, the state the action
@@ -31,6 +33,37 @@ const PRESETS: [(&str, Dialect); 5] = [
 
 /// Something done to the document at a row and a column.
 type Operation = fn(&mut Document, usize, usize);
+
+/// The exports, so there is one list of what needs a document open to be worth
+/// offering.
+const EXPORTS: [&str; 3] = ["export-pdf", "export-html", "export-ods"];
+
+/// What Comma can write that it will not read back. Each is output: never
+/// reopened, never offered as Save, and never the document.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Format {
+    Pdf,
+    Html,
+    Ods,
+}
+
+impl Format {
+    fn extension(self) -> &'static str {
+        match self {
+            Self::Pdf => "pdf",
+            Self::Html => "html",
+            Self::Ods => "ods",
+        }
+    }
+
+    fn description(self) -> String {
+        match self {
+            Self::Pdf => gettext("PDF Document"),
+            Self::Html => gettext("Web Page"),
+            Self::Ods => gettext("OpenDocument Spreadsheet"),
+        }
+    }
+}
 
 /// The operations that add or take away a row or a column, and whether each one
 /// needs a cell to already exist. They all happen at the cell the user last
@@ -268,6 +301,16 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.replace_all())
             .build();
 
+        let export_pdf = gio::ActionEntry::builder("export-pdf")
+            .activate(|window: &Self, _, _| window.export(Format::Pdf))
+            .build();
+        let export_html = gio::ActionEntry::builder("export-html")
+            .activate(|window: &Self, _, _| window.export(Format::Html))
+            .build();
+        let export_ods = gio::ActionEntry::builder("export-ods")
+            .activate(|window: &Self, _, _| window.export(Format::Ods))
+            .build();
+
         let commit_order = gio::ActionEntry::builder("commit-order")
             .activate(|window: &Self, _, _| window.commit_order())
             .build();
@@ -306,6 +349,9 @@ impl CommaWindow {
             redo,
             find,
             replace_all,
+            export_pdf,
+            export_html,
+            export_ods,
             commit_order,
             delimiter,
             header,
@@ -547,22 +593,7 @@ impl CommaWindow {
             return;
         };
         let document = document.borrow();
-
-        let header = imp.rows.header() && document.row_count() > 0;
-        let titles: Vec<String> = (0..document.column_count())
-            .map(|column| {
-                let title = if header {
-                    document.value(0, column)
-                } else {
-                    ""
-                };
-                if title.is_empty() {
-                    grid::column_letter(column)
-                } else {
-                    title.to_owned()
-                }
-            })
-            .collect();
+        let titles = self.column_titles(&document);
 
         // Rebuilding the columns throws away the sorters with them, and with
         // those the arrow saying which column the grid is sorted by.
@@ -584,6 +615,27 @@ impl CommaWindow {
         {
             self.sort_by(column, direction);
         }
+    }
+
+    /// What to head each column with: the header record if the grid is showing
+    /// one, otherwise the spreadsheet letters. A header cell that is blank names
+    /// nothing, so its column keeps its letter.
+    fn column_titles(&self, document: &Document) -> Vec<String> {
+        let header = self.imp().rows.header() && document.row_count() > 0;
+
+        (0..document.column_count())
+            .map(|column| {
+                let title = if header {
+                    document.value(0, column)
+                } else {
+                    ""
+                };
+                match title.is_empty() {
+                    true => grid::column_letter(column),
+                    false => title.to_owned(),
+                }
+            })
+            .collect()
     }
 
     fn cell_said(&self, row: usize, column: usize, event: Event) {
@@ -641,6 +693,104 @@ impl CommaWindow {
         imp.column_view
             .sort_by_column(None::<&gtk::ColumnViewColumn>, gtk::SortType::Ascending);
         self.reload();
+    }
+
+    /// Writes what the grid is showing somewhere else, in a format Comma cannot
+    /// read back.
+    ///
+    /// Deliberately not Save, and deliberately somewhere the user has to name:
+    /// there is never a moment where the file being edited has quietly become a
+    /// PDF.
+    fn export(&self, format: Format) {
+        let dialog = gtk::FileDialog::builder()
+            .title(gettext("Export"))
+            .filters(&format_filter(format))
+            .modal(true)
+            .build();
+        dialog.set_initial_name(Some(&export_name(&self.document_name(), format)));
+        if let Some(folder) = self
+            .imp()
+            .file
+            .borrow()
+            .as_ref()
+            .and_then(gio::File::parent)
+        {
+            dialog.set_initial_folder(Some(&folder));
+        }
+
+        let window = self.clone();
+        dialog.save(
+            Some(self),
+            gio::Cancellable::NONE,
+            move |result| match result {
+                Ok(file) => window.export_to(&file, format),
+                Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
+                Err(error) => {
+                    window.report(&gettext("Could Not Export the File"), &error.to_string())
+                }
+            },
+        );
+    }
+
+    fn export_to(&self, file: &gio::File, format: Format) {
+        let failed = gettext("Could Not Export the File");
+        let Some(document) = self.imp().rows.document() else {
+            return;
+        };
+
+        let document = document.borrow();
+        let columns = self.column_titles(&document);
+        let rows = self.shown_rows();
+        let sheet = Sheet {
+            document: &document,
+            columns: &columns,
+            titled: self.imp().rows.header() && document.row_count() > 0,
+            rows: &rows,
+            name: &self.document_name(),
+        };
+
+        let written = match format {
+            // A print operation writes to a path of its own accord, so this is
+            // the one export that cannot be sent somewhere GIO can reach but the
+            // filesystem cannot.
+            Format::Pdf => match file.path() {
+                Some(path) => pdf::write(&sheet, &path.to_string_lossy(), self)
+                    .map_err(|error| error.to_string()),
+                None => Err(gettext(
+                    "A PDF can only be written to a folder on this computer.",
+                )),
+            },
+            Format::Html => self.put(file, export::html(&sheet).as_bytes()),
+            Format::Ods => self.put(file, &export::ods(&sheet)),
+        };
+
+        if let Err(error) = written {
+            self.report(&failed, &error);
+        }
+    }
+
+    fn put(&self, file: &gio::File, bytes: &[u8]) -> Result<(), String> {
+        file.replace_contents(
+            bytes,
+            None,
+            false,
+            gio::FileCreateFlags::NONE,
+            gio::Cancellable::NONE,
+        )
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+    }
+
+    /// The rows the grid is showing, in the order it is showing them. An export
+    /// is a picture of the grid, so a search and a sort are part of it.
+    fn shown_rows(&self) -> Vec<usize> {
+        self.imp()
+            .sorted
+            .iter::<glib::Object>()
+            .flatten()
+            .filter_map(|object| object.downcast::<Row>().ok())
+            .map(|row| row.index())
+            .collect()
     }
 
     /// Which data column the grid is sorted by, and which way, when it is
@@ -879,7 +1029,11 @@ impl CommaWindow {
 
         self.show_title(modified);
         self.set_action_enabled("save", modified);
-        self.set_action_enabled("save-as", self.imp().rows.document().is_some());
+        let open = self.imp().rows.document().is_some();
+        self.set_action_enabled("save-as", open);
+        for name in EXPORTS {
+            self.set_action_enabled(name, open);
+        }
         self.set_action_enabled("undo", undo);
         self.set_action_enabled("redo", redo);
         let searching = !self.imp().needle.borrow().is_empty();
@@ -931,6 +1085,22 @@ impl CommaWindow {
         dialog.add_response("close", &gettext("_Close"));
         dialog.present(Some(self));
     }
+}
+
+/// A name to offer for an export: the file's own, wearing the new extension.
+fn export_name(name: &str, format: Format) -> String {
+    let stem = name.rsplit_once('.').map_or(name, |(stem, _)| stem);
+    format!("{stem}.{}", format.extension())
+}
+
+fn format_filter(format: Format) -> gio::ListStore {
+    let filter = gtk::FileFilter::new();
+    filter.set_name(Some(&format.description()));
+    filter.add_pattern(&format!("*.{}", format.extension()));
+
+    let filters = gio::ListStore::new::<gtk::FileFilter>();
+    filters.append(&filter);
+    filters
 }
 
 fn file_filters() -> gio::ListStore {

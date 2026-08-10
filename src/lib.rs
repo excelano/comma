@@ -5,4 +5,5 @@
 // Built with AI assistance (Claude, Anthropic)
 
 pub mod document;
+pub mod export;
 pub mod search;

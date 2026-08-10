@@ -172,6 +172,27 @@ menu primary_menu {
   }
 
   section {
+    submenu {
+      label: _("_Export");
+
+      item {
+        label: _("As PDF…");
+        action: "win.export-pdf";
+      }
+
+      item {
+        label: _("As Web Page…");
+        action: "win.export-html";
+      }
+
+      item {
+        label: _("As Spreadsheet…");
+        action: "win.export-ods";
+      }
+    }
+  }
+
+  section {
     item {
       label: _("_Open…");
       action: "win.open";

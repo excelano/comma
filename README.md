@@ -12,7 +12,9 @@ Early, and useful. Comma opens a file from the command line, the file manager, o
 
 Clicking a column header puts the grid in that order without touching the file; one menu item writes that order down when you want it. Searching hides the rows nothing matched in, so what you are looking at before you replace is exactly what you are about to change.
 
-Not written yet: the PDF, HTML, and ODS exports. Keyboard navigation works but has not been gone over properly, there is no context menu, the icon is a placeholder, and there are no translations yet.
+Export writes what the grid is showing as a PDF, a web page, or an OpenDocument spreadsheet. All three are output: they are never reopened, never offered as Save, and every value goes into them as text, so a leading zero is still a leading zero and a sixteen-digit account number is still itself.
+
+Not written yet: keyboard navigation works but has not been gone over properly, there is no context menu, the icon is a placeholder, and there are no translations yet.
 
 ## Building
 

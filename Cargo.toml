@@ -12,6 +12,11 @@ publish = false
 gtk = { package = "gtk4", version = "0.11", features = ["v4_18"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+pangocairo = "0.22.8"
 
 [profile.release]
 lto = "thin"
+
+[dev-dependencies]
+zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }

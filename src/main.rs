@@ -6,6 +6,7 @@
 mod application;
 mod config;
 mod grid;
+mod pdf;
 mod window;
 
 use gtk::gio;
