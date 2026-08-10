@@ -47,7 +47,7 @@ impl Row {
 
     /// Which record of the file this is, counting from zero, which is how the
     /// document is addressed.
-    pub(super) fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         self.imp().index.get()
     }
 

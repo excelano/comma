@@ -5,13 +5,14 @@
 // than a forward one and a backward one that have to agree. Doing a change and
 // redoing it are the same code; undoing it is the same code read the other way.
 //
-// The three kinds differ only in what they keep. A cell edit keeps the record
-// it touched, because setting a cell can also widen a short record and always
-// drops the original spelling of the field it replaces. A row change keeps
-// whole records, because inserting one at the end of a file that has no
-// trailing terminator also changes the record that used to be last. A column
-// change keeps one field per record that had one, because a record too short to
-// reach the column is not touched at all.
+// The kinds differ only in what they keep, and each keeps the least that will
+// put the file back. A cell edit keeps the record it touched, because setting a
+// cell can also widen a short record and always drops the original spelling of
+// the field it replaces. A row change keeps whole records, because inserting one
+// at the end of a file that has no trailing terminator also changes the record
+// that used to be last. A column change keeps one field per record that had one,
+// because a record too short to reach the column is not touched at all. And a
+// reordering keeps no fields whatsoever, only where each record went.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
@@ -53,6 +54,11 @@ pub(super) enum Change {
         fields: Vec<(usize, Field)>,
         inserted: bool,
     },
+    /// The records put in a new order, which names for each position the record
+    /// that goes there. Taking it back is the same permutation read the other
+    /// way about, so a whole file's worth of rearranging costs one number per
+    /// record rather than a second copy of the file.
+    Order { order: Vec<usize> },
 }
 
 /// How much of the file a change moved, which is as much as a view needs to
@@ -105,8 +111,38 @@ impl Change {
                 }
                 Extent::Shape
             }
+            Self::Order { order } => {
+                // Only the fields move. A record's terminator belongs to its
+                // place in the file rather than to its contents, so the line
+                // endings stay in the order the file had them and the record
+                // that ends the file still ends it.
+                let order = if forward {
+                    order.clone()
+                } else {
+                    inverse(order)
+                };
+                let mut moving: Vec<Option<Vec<Field>>> = records
+                    .iter_mut()
+                    .map(|record| Some(std::mem::take(&mut record.fields)))
+                    .collect();
+
+                for (position, &from) in order.iter().enumerate() {
+                    records[position].fields = moving[from]
+                        .take()
+                        .expect("an order names each record exactly once");
+                }
+                Extent::Shape
+            }
         }
     }
+}
+
+fn inverse(order: &[usize]) -> Vec<usize> {
+    let mut inverse = vec![0; order.len()];
+    for (position, &from) in order.iter().enumerate() {
+        inverse[from] = position;
+    }
+    inverse
 }
 
 impl History {

@@ -15,7 +15,7 @@ use comma::document::{Dialect, Document, Extent, sniff};
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
-use crate::grid::{self, Event, RowModel};
+use crate::grid::{self, Event, Row, RowModel};
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
 /// about a delimiter — its menu entry, its button label, the state the action
@@ -88,6 +88,10 @@ mod imp {
         #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
         pub rows: RowModel,
+        /// The rows as the view has them, which is the document's rows put
+        /// through whatever the user has asked to see. Sorting is a view of the
+        /// file and changes nothing about it until it is asked to.
+        pub sorted: gtk::SortListModel,
         /// The file the document was read from, and the one Save writes back
         /// to.
         pub file: RefCell<Option<gio::File>>,
@@ -107,6 +111,7 @@ mod imp {
                 column_view: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
                 rows: RowModel::default(),
+                sorted: gtk::SortListModel::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
                 settings: gio::Settings::new(APP_ID),
@@ -139,8 +144,20 @@ mod imp {
 
             // The grid shows every row and selects none: there is nothing yet
             // that acts on a selected row, and a highlight would promise one.
+            self.sorted.set_model(Some(&self.rows));
+            self.sorted.set_sorter(self.column_view.sorter().as_ref());
             self.column_view
-                .set_model(Some(&gtk::NoSelection::new(Some(self.rows.clone()))));
+                .set_model(Some(&gtk::NoSelection::new(Some(self.sorted.clone()))));
+
+            // Which column the grid is sorted by decides whether there is an
+            // order worth writing to the file.
+            if let Some(sorter) = self.column_view.sorter() {
+                sorter.connect_changed(glib::clone!(
+                    #[weak]
+                    window,
+                    move |_, _| window.show_state()
+                ));
+            }
 
             self.dialect_button.set_menu_model(Some(&reading_menu()));
         }
@@ -211,6 +228,10 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.step_history(Document::redo))
             .build();
 
+        let commit_order = gio::ActionEntry::builder("commit-order")
+            .activate(|window: &Self, _, _| window.commit_order())
+            .build();
+
         let delimiter = gio::ActionEntry::builder("delimiter")
             .parameter_type(Some(glib::VariantTy::STRING))
             .state(PRESETS[0].0.to_variant())
@@ -237,7 +258,16 @@ impl CommaWindow {
             })
             .build();
 
-        let mut entries = vec![open, save, save_as, undo, redo, delimiter, header];
+        let mut entries = vec![
+            open,
+            save,
+            save_as,
+            undo,
+            redo,
+            commit_order,
+            delimiter,
+            header,
+        ];
         for (name, change, needs_cell) in STRUCTURE {
             entries.push(
                 gio::ActionEntry::builder(name)
@@ -251,7 +281,7 @@ impl CommaWindow {
         for (name, _, _) in STRUCTURE {
             self.set_action_enabled(name, false);
         }
-        for name in ["save", "save-as", "undo", "redo"] {
+        for name in ["save", "save-as", "undo", "redo", "commit-order"] {
             self.set_action_enabled(name, false);
         }
     }
@@ -391,6 +421,10 @@ impl CommaWindow {
             })
             .collect();
 
+        // Rebuilding the columns throws away the sorters with them, and with
+        // those the arrow saying which column the grid is sorted by.
+        let sorted_by = self.sorted_by();
+
         grid::set_columns(
             &imp.column_view,
             &titles,
@@ -401,6 +435,12 @@ impl CommaWindow {
                 move |row, column, event| window.cell_said(row, column, event)
             ),
         );
+
+        if let Some((column, direction)) = sorted_by
+            && column < titles.len()
+        {
+            self.sort_by(column, direction);
+        }
     }
 
     fn cell_said(&self, row: usize, column: usize, event: Event) {
@@ -418,6 +458,83 @@ impl CommaWindow {
                 document.borrow_mut().set_value(row, column, value);
                 self.show_state();
             }
+        }
+    }
+
+    /// Writes the order the grid is showing into the file. Sorting is a view of
+    /// the file until this is asked for, and this is the only thing that makes
+    /// it anything else.
+    fn commit_order(&self) {
+        let imp = self.imp();
+        let Some(document) = imp.rows.document() else {
+            return;
+        };
+        let rows = document.borrow().row_count();
+
+        let mut order = Vec::with_capacity(rows);
+        if imp.rows.header() {
+            // The header record is not one of the rows and does not move.
+            order.push(0);
+        }
+        // A sort model says its items are plain objects, because it cannot know
+        // what it will be given until it is given it.
+        order.extend(
+            imp.sorted
+                .iter::<glib::Object>()
+                .flatten()
+                .filter_map(|object| object.downcast::<Row>().ok())
+                .map(|row| row.index()),
+        );
+
+        if order.len() != rows {
+            // Some rows are not being shown, so this order does not account for
+            // all of them, and a file is not rewritten from a part of itself.
+            return;
+        }
+
+        document.borrow_mut().reorder_rows(order);
+        // The file is in that order now, so the grid has nothing left to do
+        // about it.
+        imp.column_view
+            .sort_by_column(None::<&gtk::ColumnViewColumn>, gtk::SortType::Ascending);
+        self.reload();
+    }
+
+    /// Which data column the grid is sorted by, and which way, when it is
+    /// sorted by one at all.
+    fn sorted_by(&self) -> Option<(usize, gtk::SortType)> {
+        let sorter = self
+            .imp()
+            .column_view
+            .sorter()?
+            .downcast::<gtk::ColumnViewSorter>()
+            .ok()?;
+        let sorted = sorter.primary_sort_column()?;
+
+        let columns = self.imp().column_view.columns();
+        let position = (0..columns.n_items()).find(|&index| {
+            columns
+                .item(index)
+                .and_downcast::<gtk::ColumnViewColumn>()
+                .is_some_and(|column| column == sorted)
+        })?;
+
+        // The first column is the row-number gutter, which nothing sorts by.
+        Some((
+            position.checked_sub(1)? as usize,
+            sorter.primary_sort_order(),
+        ))
+    }
+
+    fn sort_by(&self, column: usize, direction: gtk::SortType) {
+        let columns = self.imp().column_view.columns();
+        if let Some(column) = columns
+            .item(column as u32 + 1)
+            .and_downcast::<gtk::ColumnViewColumn>()
+        {
+            self.imp()
+                .column_view
+                .sort_by_column(Some(&column), direction);
         }
     }
 
@@ -622,6 +739,7 @@ impl CommaWindow {
         self.set_action_enabled("save-as", self.imp().rows.document().is_some());
         self.set_action_enabled("undo", undo);
         self.set_action_enabled("redo", redo);
+        self.set_action_enabled("commit-order", self.sorted_by().is_some());
 
         self.show_reach();
     }

@@ -314,6 +314,22 @@ impl Document {
         });
     }
 
+    /// Puts the records in a new order, which names for each position the
+    /// record that goes there.
+    ///
+    /// Only the fields move. A record's terminator belongs to its place in the
+    /// file rather than to its contents, so a file of mixed line endings keeps
+    /// the shape it had and the record that ends the file still ends it.
+    pub fn reorder_rows(&mut self, order: Vec<usize>) {
+        assert_eq!(
+            order.len(),
+            self.records.len(),
+            "a new order has to say where every record goes"
+        );
+
+        self.commit(Change::Order { order });
+    }
+
     fn rows_reaching(
         &self,
         at: usize,

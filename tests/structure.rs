@@ -177,6 +177,47 @@ fn undoing_a_column_puts_back_the_spelling_of_the_fields_it_took() {
 }
 
 #[test]
+fn reordering_moves_the_fields_and_leaves_the_line_endings_where_they_are() {
+    // The first and third lines of this file end with a carriage return and the
+    // second does not. Reordering must not carry an ending along with the row
+    // it belonged to, or the file changes shape as well as order.
+    let mut document = load("mixed-endings.csv");
+
+    document.reorder_rows(vec![2, 1, 0]);
+
+    assert_eq!(
+        visible(&document.to_bytes()),
+        visible(b"e,f\r\nc,d\na,b\r\n")
+    );
+}
+
+#[test]
+fn reordering_a_file_that_ends_without_a_newline_still_ends_without_one() {
+    let mut document = load("no-trailing-newline.csv");
+
+    document.reorder_rows(vec![1, 0]);
+
+    assert_eq!(visible(&document.to_bytes()), visible(b"1,Ada\nid,name"));
+}
+
+#[test]
+fn undoing_a_reordering_puts_every_row_back() {
+    let name = "odd-quoting.csv";
+    let original = read(name);
+    let mut document = load(name);
+
+    document.reorder_rows(vec![2, 0, 1]);
+    assert_eq!(document.value(0, 1), "unquoted");
+
+    assert_eq!(document.undo(), Some(Extent::Shape));
+    assert_eq!(
+        visible(&document.to_bytes()),
+        visible(&original),
+        "an order taken back has to restore each field's original spelling too"
+    );
+}
+
+#[test]
 fn a_structural_change_is_one_thing_to_undo() {
     let mut document = load("plain.csv");
 

@@ -15,6 +15,7 @@
 mod cell;
 mod letters;
 mod model;
+mod order;
 mod row;
 
 pub use letters::column_letter;
@@ -110,9 +111,24 @@ fn data_column(index: usize, title: &str, report: Rc<cell::Report>) -> gtk::Colu
     gtk::ColumnViewColumn::builder()
         .title(title)
         .factory(&factory)
+        .sorter(&value_sorter(index))
         .resizable(true)
         .fixed_width(DEFAULT_COLUMN_WIDTH)
         .build()
+}
+
+/// Giving a column a sorter is what makes its header a thing you can click, and
+/// what puts the arrow there once you have.
+fn value_sorter(index: usize) -> gtk::CustomSorter {
+    gtk::CustomSorter::new(move |left, right| {
+        let value = |object: &glib::Object| {
+            object
+                .downcast_ref::<Row>()
+                .expect("the model holds Rows")
+                .value(index)
+        };
+        order::compare(&value(left), &value(right)).into()
+    })
 }
 
 fn as_cell(item: &glib::Object) -> &gtk::ColumnViewCell {
