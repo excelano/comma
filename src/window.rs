@@ -590,13 +590,7 @@ impl CommaWindow {
             return;
         }
 
-        let rows: Vec<usize> = imp
-            .sorted
-            .iter::<glib::Object>()
-            .flatten()
-            .filter_map(|object| object.downcast::<Row>().ok())
-            .map(|row| row.index())
-            .collect();
+        let rows = self.shown_rows();
 
         let replacement = imp.replacement.text();
         let changed = document
@@ -820,15 +814,7 @@ impl CommaWindow {
             // The header record is not one of the rows and does not move.
             order.push(0);
         }
-        // A sort model says its items are plain objects, because it cannot know
-        // what it will be given until it is given it.
-        order.extend(
-            imp.sorted
-                .iter::<glib::Object>()
-                .flatten()
-                .filter_map(|object| object.downcast::<Row>().ok())
-                .map(|row| row.index()),
-        );
+        order.extend(self.shown_rows());
 
         if order.len() != rows {
             // Some rows are not being shown, so this order does not account for
@@ -933,6 +919,8 @@ impl CommaWindow {
     /// The rows the grid is showing, in the order it is showing them. An export
     /// is a picture of the grid, so a search and a sort are part of it.
     fn shown_rows(&self) -> Vec<usize> {
+        // A sort model says its items are plain objects, because it cannot know
+        // what it will be given until it is given it.
         self.imp()
             .sorted
             .iter::<glib::Object>()

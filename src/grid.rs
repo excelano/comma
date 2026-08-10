@@ -69,7 +69,8 @@ pub fn set_columns(
 /// So this says whether it found one, and a caller that has just asked the view
 /// to scroll somewhere can ask again once it has.
 pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -> bool {
-    match find_cell(column_view.clone().upcast(), position, column) {
+    let wanted = |cell: &Cell| cell.position() == position && cell.column() == column;
+    match find(column_view.upcast_ref(), &wanted) {
         Some(cell) => cell.grab_focus(),
         None => false,
     }
@@ -78,24 +79,13 @@ pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -
 /// The first cell anywhere inside a widget, for when the keyboard has landed on
 /// something that holds cells rather than on one of them.
 pub fn cell_within(widget: &gtk::Widget) -> Option<Cell> {
-    if let Some(cell) = widget.downcast_ref::<Cell>() {
-        return Some(cell.clone());
-    }
-
-    let mut child = widget.first_child();
-    while let Some(current) = child {
-        child = current.next_sibling();
-        if let Some(cell) = cell_within(&current) {
-            return Some(cell);
-        }
-    }
-    None
+    find(widget, &|_| true)
 }
 
-fn find_cell(widget: gtk::Widget, position: u32, column: usize) -> Option<Cell> {
+/// The first cell inside a widget that answers to `wanted`.
+fn find(widget: &gtk::Widget, wanted: &dyn Fn(&Cell) -> bool) -> Option<Cell> {
     if let Some(cell) = widget.downcast_ref::<Cell>()
-        && cell.position() == position
-        && cell.column() == column
+        && wanted(cell)
     {
         return Some(cell.clone());
     }
@@ -103,7 +93,7 @@ fn find_cell(widget: gtk::Widget, position: u32, column: usize) -> Option<Cell> 
     let mut child = widget.first_child();
     while let Some(current) = child {
         child = current.next_sibling();
-        if let Some(cell) = find_cell(current, position, column) {
+        if let Some(cell) = find(&current, wanted) {
             return Some(cell);
         }
     }
