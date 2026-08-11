@@ -119,6 +119,11 @@ impl CommaWindow {
             let (Some(focused), Some(cell)) =
                 (gtk::prelude::RootExt::focus(window), window.focused_cell())
             else {
+                // Nothing in the table has the keyboard, so the row it was in
+                // stops being lit. The table's own row gives the tint up on its
+                // own, from `:focus-within`; the number beside it is in another
+                // view and has to be told.
+                window.imp().gutter.set_current(None);
                 return;
             };
 
@@ -143,11 +148,11 @@ impl CommaWindow {
                 }
                 return;
             }
-            window.imp().current.set(Some(Cursor {
+            window.set_cursor(Cursor {
                 position: cell.position(),
                 row: cell.row(),
                 column: cell.column(),
-            }));
+            });
             window.show_reach();
         });
     }
@@ -172,7 +177,7 @@ impl CommaWindow {
         }
 
         let rows = imp.sorted.n_items();
-        let columns = imp.column_view.columns().n_items().saturating_sub(1);
+        let columns = imp.column_view.columns().n_items();
         if rows == 0 || columns == 0 {
             return;
         }
@@ -219,7 +224,7 @@ impl CommaWindow {
         };
 
         let rows = imp.sorted.n_items();
-        let columns = imp.column_view.columns().n_items().saturating_sub(1) as usize;
+        let columns = imp.column_view.columns().n_items() as usize;
         if rows == 0 || columns == 0 {
             return;
         }
@@ -249,7 +254,7 @@ impl CommaWindow {
         let Some(target) = imp
             .column_view
             .columns()
-            .item(column as u32 + 1)
+            .item(column as u32)
             .and_downcast::<gtk::ColumnViewColumn>()
         else {
             return;
@@ -263,11 +268,11 @@ impl CommaWindow {
             .and_downcast::<Row>()
             .map(|row| row.index())
         {
-            imp.current.set(Some(Cursor {
+            self.set_cursor(Cursor {
                 position,
                 row,
                 column,
-            }));
+            });
         }
 
         imp.column_view
@@ -287,6 +292,14 @@ impl CommaWindow {
             });
         }
         self.show_reach();
+    }
+
+    /// Puts the cursor somewhere and lights the row it lands on, in the numbers
+    /// beside the table as well as in the table.
+    fn set_cursor(&self, cursor: Cursor) {
+        let imp = self.imp();
+        imp.current.set(Some(cursor));
+        imp.gutter.set_current(Some(cursor.position));
     }
 
     /// Opens the cell the keyboard is on for typing.

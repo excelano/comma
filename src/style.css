@@ -19,9 +19,22 @@
  * be far from the row number that names it, and this is what ties the two back
  * together. It follows the focus on its own, so it promises nothing about
  * selection: there is no such thing here, and a row lit up by anything other
- * than where you are would say there was. */
-columnview row:focus-within {
+ * than where you are would say there was.
+ *
+ * The table lights its own row, because the cell holding the keyboard is inside
+ * that row. The numbers are pinned in a view of their own and nothing they hold
+ * has the focus, so the gutter is told which one to light and says so with a
+ * class. One tint for the two of them: it is one row. */
+columnview row:focus-within,
+columnview.gutter .current {
   background-color: alpha(@accent_bg_color, 0.08);
+}
+
+/* Where the pinned numbers end and the table begins. The column separator said
+ * this while the numbers were a column of the table, and there is no separator
+ * between two views. */
+columnview.gutter {
+  border-right: 1px solid @borders;
 }
 
 /* Where the keyboard is. GTK draws no focus ring around a plain box, and

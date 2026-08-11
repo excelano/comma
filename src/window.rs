@@ -26,7 +26,7 @@ use comma::document::{Dialect, Document, Extent};
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
-use crate::grid::{self, Edited, RowModel};
+use crate::grid::{self, Edited, Gutter, RowModel};
 use crate::shortcuts;
 use crate::translatable;
 
@@ -159,6 +159,18 @@ mod imp {
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub column_view: TemplateChild<gtk::ColumnView>,
+        /// The table's scrolled window, which holds the adjustments both views
+        /// are moved by.
+        #[template_child]
+        pub table: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub gutter_scroller: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub gutter_view: TemplateChild<gtk::ColumnView>,
+        /// The table's horizontal scrollbar, which is outside it so that it
+        /// takes its strip of height off the gutter as well.
+        #[template_child]
+        pub across: TemplateChild<gtk::Scrollbar>,
         #[template_child]
         pub open_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -172,6 +184,8 @@ mod imp {
         #[template_child]
         pub replacement: TemplateChild<gtk::Entry>,
         pub rows: RowModel,
+        /// The row numbers, in a view of their own beside the table.
+        pub gutter: Gutter,
         /// The rows as the view has them, which is the document's rows put
         /// through whatever the user has asked to see. Hiding rows and putting
         /// them in another order are views of the file and change nothing about
@@ -192,9 +206,6 @@ mod imp {
         /// which is the only way to tell a heading clicked a third time from
         /// one clicked for the first.
         pub previous_sort: Cell<Option<(usize, gtk::SortType)>>,
-        /// How wide the row-number gutter was built to be, which a row coming or
-        /// going can outgrow.
-        pub gutter_digits: Cell<i32>,
         /// The menus the right button opens, each made the first time it is
         /// asked for and then moved to wherever it is asked for next. A cell
         /// offers both halves; a row number offers only the rows.
@@ -209,6 +220,10 @@ mod imp {
                 window_title: TemplateChild::default(),
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
+                table: TemplateChild::default(),
+                gutter_scroller: TemplateChild::default(),
+                gutter_view: TemplateChild::default(),
+                across: TemplateChild::default(),
                 open_button: TemplateChild::default(),
                 menu_button: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
@@ -216,13 +231,13 @@ mod imp {
                 search_entry: TemplateChild::default(),
                 replacement: TemplateChild::default(),
                 rows: RowModel::default(),
+                gutter: Gutter::default(),
                 shown: gtk::FilterListModel::default(),
                 sorted: gtk::SortListModel::default(),
                 needle: RefCell::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
                 previous_sort: Cell::default(),
-                gutter_digits: Cell::default(),
                 cell_menu: OnceCell::default(),
                 row_menu: OnceCell::default(),
                 settings: gio::Settings::new(APP_ID),
@@ -261,8 +276,13 @@ mod imp {
             self.shown.set_incremental(true);
             self.sorted.set_model(Some(&self.shown));
             self.sorted.set_sorter(self.column_view.sorter().as_ref());
-            self.column_view
-                .set_model(Some(&gtk::NoSelection::new(Some(self.sorted.clone()))));
+            // One model behind both views, so the numbers are in the order the
+            // table is in without being told, and row n of one is row n of the
+            // other by identity rather than by arithmetic.
+            let model = gtk::NoSelection::new(Some(self.sorted.clone()));
+            self.column_view.set_model(Some(&model));
+            self.gutter.attach(&self.gutter_view, &model);
+            window.share_scrolling();
 
             // Which column the grid is sorted by decides whether there is an
             // order worth writing to the file, and whether a row can be put
@@ -571,6 +591,38 @@ impl CommaWindow {
         imp.stack.set_visible_child_name("grid");
     }
 
+    /// Ties the row numbers to the table: one vertical adjustment moves both,
+    /// rather than one of them following the other a frame later.
+    ///
+    /// That holds only while the two are the same height, so the table's
+    /// horizontal scrollbar is outside it and under both. Left inside, it takes
+    /// a strip off the bottom of the table that the gutter does not lose, and
+    /// the two disagree about how much of the file a screen holds. A scrollbar
+    /// of our own does not hide itself when there is nothing to scroll, which is
+    /// the one thing it costs.
+    fn share_scrolling(&self) {
+        let imp = self.imp();
+        imp.gutter_scroller
+            .set_vadjustment(Some(&imp.table.vadjustment()));
+
+        let across = imp.table.hadjustment();
+        imp.across.set_adjustment(Some(&across));
+        across.connect_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.show_across()
+        ));
+        self.show_across();
+    }
+
+    /// Shows the horizontal scrollbar while the table is wider than the window.
+    fn show_across(&self) {
+        let across = self.imp().table.hadjustment();
+        self.imp()
+            .across
+            .set_visible(across.upper() > across.page_size());
+    }
+
     /// Draws as much of the grid again as a change moved, and no more.
     fn apply(&self, extent: Extent) {
         match extent {
@@ -591,22 +643,25 @@ impl CommaWindow {
     /// Redraws a splice of rows where it is, which keeps every row above it
     /// drawn and the grid where it was scrolled to.
     ///
-    /// Two things a row change can do reach further than the splice, and each
-    /// falls back to drawing the grid again: while the header is on, the first
-    /// record is the column titles, and the row numbers are as wide as the
-    /// largest of them.
+    /// One thing a row change can do reaches further than the splice and falls
+    /// back to drawing the grid again: while the header is on, the first record
+    /// is the column titles. Growing the row numbers used to be the other, and
+    /// is not any more, because they are a view of their own to be widened
+    /// where they stand.
     fn reload_rows(&self, at: usize, gone: usize, come: usize) {
         let imp = self.imp();
         let Some(document) = imp.rows.document() else {
             return;
         };
-        let rows = document.borrow().row_count();
 
-        if (imp.rows.header() && at == 0) || grid::gutter_digits(rows) != imp.gutter_digits.get() {
+        if imp.rows.header() && at == 0 {
             return self.reload();
         }
 
+        imp.gutter
+            .set_digits(grid::gutter_digits(document.borrow().row_count()));
         imp.rows.rows_changed(at, gone, come);
+
         self.show_state();
     }
 
@@ -628,10 +683,8 @@ impl CommaWindow {
         };
         let document = document.borrow();
         let titles = self.column_titles(&document);
-        // What a later row change measures itself against to know whether the
-        // gutter it was built with is still wide enough.
-        imp.gutter_digits
-            .set(grid::gutter_digits(document.row_count()));
+        imp.gutter
+            .set_digits(grid::gutter_digits(document.row_count()));
 
         // Rebuilding the columns throws away the sorters with them, and with
         // those the arrow saying which column the grid is sorted by.
@@ -640,7 +693,6 @@ impl CommaWindow {
         grid::set_columns(
             &imp.column_view,
             &titles,
-            document.row_count(),
             glib::clone!(
                 #[weak(rename_to = window)]
                 self,
@@ -653,7 +705,7 @@ impl CommaWindow {
         let columns = imp.column_view.columns();
         for index in 0..titles.len() {
             if let Some(column) = columns
-                .item(index as u32 + 1)
+                .item(index as u32)
                 .and_downcast::<gtk::ColumnViewColumn>()
             {
                 column.set_header_menu(Some(&column_menu(index)));

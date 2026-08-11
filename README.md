@@ -14,7 +14,7 @@ Clicking a column header puts the grid in that order without touching the file; 
 
 Export writes what the grid is showing as a PDF, a web page, or an OpenDocument spreadsheet. All three are output: they are never reopened, never offered as Save, and every value goes into them as text, so a leading zero is still a leading zero and a sixteen-digit account number is still itself.
 
-The keyboard reaches everything, the row numbers and column headings are handles for the operations that act on them, and Comma speaks English and German. Still to come: the row-number gutter scrolls away horizontally instead of staying pinned, and nothing acts on more than one cell at a time.
+The keyboard reaches everything, the row numbers and column headings are handles for the operations that act on them, and both stay put as you scroll: the headings across the top, the numbers down the side. Comma speaks English and German. Still to come: nothing acts on more than one cell at a time.
 
 ## Installing
 

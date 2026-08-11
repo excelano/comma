@@ -120,8 +120,7 @@ impl RowModel {
     /// from the file being opened again.
     ///
     /// The caller has already settled that the splice does not reach the header
-    /// record and does not change how wide the row numbers are; those move more
-    /// of the grid than this can describe.
+    /// record, which moves more of the grid than this can describe.
     pub fn rows_changed(&self, at: usize, gone: usize, come: usize) {
         let position = at.saturating_sub(self.imp().first_row()) as u32;
         self.imp().reported.set(self.n_items());

@@ -37,7 +37,7 @@ impl CommaWindow {
         let menu = self
             .imp()
             .cell_menu
-            .get_or_init(|| self.popover(&whole_menu()));
+            .get_or_init(|| self.popover(&whole_menu(), &*self.imp().column_view));
         point_at(menu, x, y);
     }
 
@@ -48,17 +48,21 @@ impl CommaWindow {
         let menu = self
             .imp()
             .row_menu
-            .get_or_init(|| self.popover(&section(Axis::Row, AT_CURSOR)));
+            .get_or_init(|| self.popover(&section(Axis::Row, AT_CURSOR), &*self.imp().gutter_view));
         point_at(menu, x, y);
     }
 
-    /// A menu that hangs off the table and is moved to wherever it is next
-    /// asked for, rather than one built for each press.
-    fn popover(&self, model: &gio::Menu) -> gtk::PopoverMenu {
+    /// A menu that hangs off one of the two views and is moved to wherever it is
+    /// next asked for, rather than one built for each press.
+    ///
+    /// Which view matters: the point it is opened at is measured against the one
+    /// the press landed in, and a row number is in the gutter rather than in the
+    /// table.
+    fn popover(&self, model: &gio::Menu, at: &impl IsA<gtk::Widget>) -> gtk::PopoverMenu {
         let menu = gtk::PopoverMenu::from_model(Some(model));
         menu.set_has_arrow(false);
         menu.set_halign(gtk::Align::Start);
-        menu.set_parent(&*self.imp().column_view);
+        menu.set_parent(at);
         menu
     }
 

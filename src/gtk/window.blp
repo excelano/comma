@@ -101,15 +101,45 @@ template $CommaWindow: Adw.ApplicationWindow {
       StackPage {
         name: "grid";
 
-        child: ScrolledWindow {
-          hexpand: true;
-          vexpand: true;
+        child: Box {
+          orientation: vertical;
 
-          child: ColumnView column_view {
-            show-row-separators: true;
-            show-column-separators: true;
-            reorderable: false;
-          };
+          Box {
+            orientation: horizontal;
+            vexpand: true;
+
+            ScrolledWindow gutter_scroller {
+              hscrollbar-policy: external;
+              vscrollbar-policy: external;
+              // A scrolled window asks for nothing of its own, so beside a table
+              // that expands this one would be given no width at all.
+              propagate-natural-width: true;
+
+              child: ColumnView gutter_view {
+                show-row-separators: true;
+                reorderable: false;
+
+                styles [
+                  "gutter",
+                ]
+              };
+            }
+
+            ScrolledWindow table {
+              hexpand: true;
+              hscrollbar-policy: external;
+
+              child: ColumnView column_view {
+                show-row-separators: true;
+                show-column-separators: true;
+                reorderable: false;
+              };
+            }
+          }
+
+          Scrollbar across {
+            orientation: horizontal;
+          }
         };
       }
     };

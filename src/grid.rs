@@ -9,16 +9,21 @@
 // Columns are built to match the document rather than declared in the template,
 // because how many there are is not known until a file is open.
 //
+// The row numbers are not among them. They are a view of their own, next door in
+// `gutter`, so that they stay put while the table scrolls sideways.
+//
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
 mod cell;
+mod gutter;
 mod model;
 mod number;
 mod order;
 mod row;
 
 pub use cell::{Cell, LINE_BREAK};
+pub use gutter::Gutter;
 pub use model::RowModel;
 pub use row::Row;
 
@@ -43,18 +48,16 @@ pub struct Edited {
     pub moving_on: bool,
 }
 
-/// Rebuilds the view's columns: a row-number gutter wide enough for `rows`,
-/// then one column per title.
+/// Rebuilds the view's columns, one per title. The row numbers are not among
+/// them: they are a view of their own, beside this one.
 ///
 /// `report` is called each time an edit finishes.
 pub fn set_columns(
     column_view: &gtk::ColumnView,
     titles: &[String],
-    rows: usize,
     report: impl Fn(Edited) + 'static,
 ) {
     remove_all_columns(column_view);
-    column_view.append_column(&gutter_column(rows));
 
     let report: Rc<cell::Report> = Rc::new(report);
     for (index, title) in titles.iter().enumerate() {
@@ -69,7 +72,7 @@ pub fn set_columns(
 /// to scroll somewhere can ask again once it has.
 pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -> bool {
     let wanted = |cell: &Cell| cell.position() == position && cell.column() == column;
-    match find(column_view.upcast_ref(), &wanted) {
+    match find::<Cell>(column_view.upcast_ref(), &wanted) {
         Some(cell) => cell.grab_focus(),
         None => false,
     }
@@ -78,7 +81,7 @@ pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -
 /// The first cell anywhere inside a widget, for when the keyboard has landed on
 /// something that holds cells rather than on one of them.
 pub fn cell_within(widget: &gtk::Widget) -> Option<Cell> {
-    find(widget, &|_| true)
+    find::<Cell>(widget, &|_| true)
 }
 
 /// A point inside one of the grid's widgets, in the table's own coordinates,
@@ -89,22 +92,57 @@ fn point_in_view(widget: &gtk::Widget, x: f64, y: f64) -> Option<(f64, f64)> {
     Some((at.x() as f64, at.y() as f64))
 }
 
-/// The first cell inside a widget that answers to `wanted`.
-fn find(widget: &gtk::Widget, wanted: &dyn Fn(&Cell) -> bool) -> Option<Cell> {
-    if let Some(cell) = widget.downcast_ref::<Cell>()
-        && wanted(cell)
-    {
-        return Some(cell.clone());
+/// The first widget of a kind inside another that answers to `wanted`.
+fn find<T: IsA<gtk::Widget>>(widget: &gtk::Widget, wanted: &dyn Fn(&T) -> bool) -> Option<T> {
+    let mut found = None;
+    visit(widget, &mut |candidate: &T| {
+        if !wanted(candidate) {
+            return glib::ControlFlow::Continue;
+        }
+        found = Some(candidate.clone());
+        glib::ControlFlow::Break
+    });
+    found
+}
+
+/// Hands `act` every widget of a kind inside another, until it says to stop.
+///
+/// Only the widgets on screen are here to be walked: the rest of the file has
+/// none yet, and the ones it had have been handed to another row by now.
+pub(crate) fn visit<T: IsA<gtk::Widget>>(
+    widget: &gtk::Widget,
+    act: &mut dyn FnMut(&T) -> glib::ControlFlow,
+) -> glib::ControlFlow {
+    if let Some(found) = widget.downcast_ref::<T>() {
+        return act(found);
     }
 
     let mut child = widget.first_child();
     while let Some(current) = child {
         child = current.next_sibling();
-        if let Some(cell) = find(&current, wanted) {
-            return Some(cell);
+        if visit(&current, act) == glib::ControlFlow::Break {
+            return glib::ControlFlow::Break;
         }
     }
-    None
+    glib::ControlFlow::Continue
+}
+
+/// How tall something showing this many lines of text has to be: one line's
+/// height for each of them, measured on the widget that will show them.
+///
+/// Counted a line at a time rather than laid out all at once, because that is
+/// how the text view does it. Three lines laid out together come to one pixel
+/// less than three lines measured one by one, and that pixel is room for the
+/// editor to scroll in, which is a shift every time the caret crosses between
+/// lines.
+///
+/// A cell asks this for its own value and a row number asks it for the tallest
+/// value in the row, so a row and the number naming it come out the same height
+/// by construction rather than by luck. They are in two views now, and nothing
+/// else lines them up.
+pub(crate) fn height_for_lines(widget: &impl IsA<gtk::Widget>, lines: usize) -> i32 {
+    let (_, line) = widget.create_pango_layout(Some("X")).pixel_size();
+    line * lines as i32
 }
 
 fn remove_all_columns(column_view: &gtk::ColumnView) {
@@ -115,35 +153,11 @@ fn remove_all_columns(column_view: &gtk::ColumnView) {
 }
 
 /// How many digits wide the row-number gutter has to be for a file of this many
-/// rows. Sized to the widest number the file can show, so it does not grow as
-/// you scroll into four-digit territory — which also means a file that crosses
-/// from 999 rows to 1000 needs its gutter built again.
+/// rows. Sized to the widest number the file can show rather than to the ones on
+/// screen, so the gutter does not change width as you scroll into four-digit
+/// territory.
 pub fn gutter_digits(rows: usize) -> i32 {
     rows.to_string().len() as i32
-}
-
-/// The row numbers.
-fn gutter_column(rows: usize) -> gtk::ColumnViewColumn {
-    let digits = gutter_digits(rows);
-
-    let factory = gtk::SignalListItemFactory::new();
-    factory.connect_setup(move |_, item| {
-        as_cell(item).set_child(Some(&number::Number::new(digits)));
-    });
-    factory.connect_bind(|_, item| {
-        let cell = as_cell(item);
-        let number = cell
-            .child()
-            .and_downcast::<number::Number>()
-            .expect("setup put a number here");
-        let row = cell.item().and_downcast::<Row>().expect("rows hold Rows");
-        number.show_row(cell.position(), row.index());
-    });
-
-    gtk::ColumnViewColumn::builder()
-        .factory(&factory)
-        .resizable(false)
-        .build()
 }
 
 fn data_column(index: usize, title: &str, report: Rc<cell::Report>) -> gtk::ColumnViewColumn {

@@ -57,6 +57,28 @@ impl Row {
         self.imp().index.get() + 1
     }
 
+    /// How many lines the tallest value in this row takes, which is how many
+    /// lines tall the row is drawn. The number beside it asks, because a row
+    /// and the number naming it are in two views now and each has to arrive at
+    /// the same height on its own.
+    pub fn lines(&self) -> usize {
+        let imp = self.imp();
+        let Some(document) = imp.document.borrow().clone() else {
+            return 1;
+        };
+        let document = document.borrow();
+        let index = imp.index.get();
+
+        // This record's own fields rather than the file's column count, which
+        // is the widest record in the file and costs a walk of all of them to
+        // find. The columns past this record's end hold nothing and are one
+        // line tall, so they cannot be the tallest.
+        (0..document.field_count(index))
+            .map(|column| document.value(index, column).split('\n').count())
+            .max()
+            .unwrap_or(1)
+    }
+
     pub fn value(&self, column: usize) -> String {
         let imp = self.imp();
         match imp.document.borrow().as_ref() {

@@ -208,17 +208,13 @@ impl CommaWindow {
                 .is_some_and(|column| column == sorted)
         })?;
 
-        // The first column is the row-number gutter, which nothing sorts by.
-        Some((
-            position.checked_sub(1)? as usize,
-            sorter.primary_sort_order(),
-        ))
+        Some((position as usize, sorter.primary_sort_order()))
     }
 
     pub(super) fn sort_by(&self, column: usize, direction: gtk::SortType) {
         let columns = self.imp().column_view.columns();
         if let Some(column) = columns
-            .item(column as u32 + 1)
+            .item(column as u32)
             .and_downcast::<gtk::ColumnViewColumn>()
         {
             self.imp()

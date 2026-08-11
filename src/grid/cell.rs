@@ -310,20 +310,15 @@ impl Cell {
         true
     }
 
-    /// How tall this cell is for a value: one line's height for each line of it.
-    ///
-    /// Counted a line at a time rather than laid out all at once, because that
-    /// is how the text view does it. Three lines laid out together come to one
-    /// pixel less than three lines measured one by one, and that pixel is room
-    /// for the editor to scroll in — which is a shift every time the caret
-    /// crosses between lines.
+    /// How tall this cell is for a value: one line's height for each line of it,
+    /// counted the way `height_for_lines` explains.
     ///
     /// Both the label and the editor are given this same answer, so the two are
     /// the same height by construction rather than by luck, and a cell does not
-    /// change size at the moment it opens.
+    /// change size at the moment it opens. The number beside the row asks the
+    /// same question of the row's tallest value.
     pub(super) fn height_for(&self, value: &str) -> i32 {
-        let (_, line) = self.imp().label.create_pango_layout(Some("X")).pixel_size();
-        line * value.split('\n').count() as i32
+        super::height_for_lines(&self.imp().label, value.split('\n').count())
     }
 
     /// Makes the editor as tall as the lines it holds, and the row with it.

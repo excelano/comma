@@ -67,23 +67,48 @@ glib::wrapper! {
 }
 
 impl Number {
-    /// A number sized to the widest one the file can show, so the gutter does
-    /// not grow as you scroll into four-digit territory.
-    pub(super) fn new(digits: i32) -> Self {
+    pub(super) fn new() -> Self {
         let number: Self = glib::Object::new();
-        number.imp().label.set_width_chars(digits);
         number.set_accessible_role(gtk::AccessibleRole::RowHeader);
         number.connect_gestures();
         number
     }
 
-    /// Says which row this now counts. Files are numbered from one everywhere a
-    /// person will read the number, including in every other tool that opens
-    /// them.
-    pub(super) fn show_row(&self, position: u32, index: usize) {
+    /// Where this number's row sits in the view, which is what the gutter is
+    /// told about when the keyboard moves.
+    pub(super) fn position(&self) -> u32 {
+        self.imp().position.get()
+    }
+
+    /// Sizes the number to the widest one the file can show, so the gutter does
+    /// not grow as you scroll into four-digit territory.
+    pub(super) fn set_digits(&self, digits: i32) {
+        self.imp().label.set_width_chars(digits);
+    }
+
+    /// Lights the number, or stops. This says where the keyboard is, and says
+    /// nothing about selection: there is no such thing here.
+    pub(super) fn set_current(&self, current: bool) {
+        if current {
+            self.add_css_class("current");
+        } else {
+            self.remove_css_class("current");
+        }
+    }
+
+    /// Says which row this now counts, and how tall that row is. Files are
+    /// numbered from one everywhere a person will read the number, including in
+    /// every other tool that opens them.
+    ///
+    /// The height is asked for rather than taken from the row beside it: that
+    /// row is in another view, and a number an inch short of its row would put
+    /// every number below it beside the wrong one.
+    pub(super) fn show_row(&self, position: u32, index: usize, lines: usize) {
         let imp = self.imp();
         imp.position.set(position);
         imp.index.set(index);
+        imp.label
+            .set_size_request(-1, super::height_for_lines(&imp.label, lines));
 
         let number = (index + 1).to_string();
         imp.label.set_text(&number);
