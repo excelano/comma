@@ -47,7 +47,7 @@ use gtk::pango;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use super::Edited;
+use super::{Edited, Records};
 
 /// Where a cell's news goes: which row and column it came from, and what it is.
 pub(super) type Report = dyn Fn(Edited);
@@ -99,12 +99,14 @@ mod imp {
         /// Where this cell's news goes. Held here because the editor is wired up
         /// long after the factory that knew it has returned.
         pub report: RefCell<Option<Rc<Report>>>,
-        /// Which record of the file this cell is showing, and which field of it.
-        pub row: Value<usize>,
+        /// Which field of a record this cell shows. Columns do not move under a
+        /// cell: one coming or going builds them all again.
         pub column: Value<usize>,
-        /// Where that row sits in the view, which a sort or a search makes
-        /// different from where it sits in the file.
-        pub position: Value<u32>,
+        /// The list item this cell was put in, which is what GTK moves when rows
+        /// move, and so the one thing here that still knows where the row is.
+        pub item: RefCell<glib::WeakRef<gtk::ColumnViewCell>>,
+        /// What to ask which record a position is showing.
+        pub records: RefCell<Option<Records>>,
     }
 
     #[glib::object_subclass]
@@ -158,16 +160,26 @@ impl Default for Cell {
 }
 
 impl Cell {
-    pub fn row(&self) -> usize {
-        self.imp().row.get()
+    /// Which record of the file this cell is showing, now.
+    ///
+    /// Asked rather than remembered, because a row put in above this one moves
+    /// it without binding it again: the value on screen is still this record's
+    /// value, and the record it belongs to is one further down the file than it
+    /// was. A cell that has been handed back to the view is showing nothing and
+    /// says so.
+    pub fn row(&self) -> Option<usize> {
+        let position = self.position()?;
+        let records = self.imp().records.borrow().clone()?;
+        records.at(position).map(|row| row.index())
     }
 
     pub fn column(&self) -> usize {
         self.imp().column.get()
     }
 
-    pub fn position(&self) -> u32 {
-        self.imp().position.get()
+    /// Where this cell's row sits in the view, now, for the same reason.
+    pub fn position(&self) -> Option<u32> {
+        super::position_of(&self.imp().item.borrow())
     }
 
     /// Opens the cell for typing. This is all an edit is: the editor showing
@@ -375,15 +387,17 @@ impl Cell {
 
         // Cloned out rather than reported from inside the borrow: what this says
         // comes back around through the document and into `bind`.
-        let report = self.imp().report.borrow().clone();
-        if let Some(report) = report {
-            report(Edited {
-                row: self.row(),
-                column: self.column(),
-                value,
-                moving_on,
-            });
-        }
+        let (Some(report), Some(row)) = (self.imp().report.borrow().clone(), self.row()) else {
+            // A cell the view has taken back has no record to write to, and
+            // guessing at one would write into whatever moved into its place.
+            return;
+        };
+        report(Edited {
+            row,
+            column: self.column(),
+            value,
+            moving_on,
+        });
     }
 }
 
@@ -393,10 +407,17 @@ impl Cell {
 ///
 /// Starting one is not connected here: Enter is bound to an action on the table,
 /// so that every key Comma answers to is declared in one place.
-pub(super) fn setup(item: &gtk::ColumnViewCell, column: usize, report: Rc<Report>) {
+pub(super) fn setup(
+    item: &gtk::ColumnViewCell,
+    column: usize,
+    records: Records,
+    report: Rc<Report>,
+) {
     let cell = Cell::default();
     cell.imp().column.set(column);
     cell.imp().report.replace(Some(report));
+    cell.imp().records.replace(Some(records));
+    cell.imp().item.replace(item.downgrade());
     // The keyboard goes to the cell rather than to the row around it, because a
     // table is read a cell at a time. The table's own cell would otherwise be a
     // stop in front of ours.
@@ -484,9 +505,7 @@ pub(super) fn bind(item: &gtk::ColumnViewCell, column: usize, title: &str) {
     // The same height the editor will ask for, so that opening this cell does
     // not move the table around it.
     imp.label.set_size_request(-1, cell.height_for(&value));
-    imp.row.set(row.index());
     imp.column.set(column);
-    imp.position.set(item.position());
 
     // What a screen reader says on reaching this cell. The column view supplies
     // the table around it; this is the cell's own part of the answer, and a

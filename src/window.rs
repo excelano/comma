@@ -661,6 +661,11 @@ impl CommaWindow {
         imp.gutter
             .set_digits(grid::gutter_digits(document.borrow().row_count()));
         imp.rows.rows_changed(at, gone, come);
+        // The rows below the splice keep their widgets, which is what keeps the
+        // grid where it was scrolled to. What they cannot keep is the number
+        // beside them: that counts from the top of the file, and the file has
+        // changed above them.
+        imp.gutter.renumber();
 
         self.show_state();
     }
@@ -690,9 +695,15 @@ impl CommaWindow {
         // those the arrow saying which column the grid is sorted by.
         let sorted_by = self.sorted_by();
 
+        // The view holds the model both it and the gutter read, which is what a
+        // cell asks which record it is showing.
+        let Some(model) = imp.column_view.model() else {
+            return;
+        };
         grid::set_columns(
             &imp.column_view,
             &titles,
+            &grid::Records::new(&model),
             glib::clone!(
                 #[weak(rename_to = window)]
                 self,

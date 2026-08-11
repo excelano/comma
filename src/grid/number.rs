@@ -9,14 +9,14 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use std::cell::Cell as Value;
+use std::cell::RefCell;
 
 use gtk::gdk;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use super::point_in_view;
+use super::{Records, point_in_view};
 
 mod imp {
     use super::*;
@@ -24,11 +24,11 @@ mod imp {
     #[derive(Debug, Default)]
     pub struct Number {
         pub label: gtk::Label,
-        /// Where the row sits in the view, which is what moving the keyboard
-        /// counts in.
-        pub position: Value<u32>,
-        /// Where the row sits in the file, which is what the number shows.
-        pub index: Value<usize>,
+        /// The list item this number was put in, which is what GTK moves when
+        /// rows move, and so what still knows where this row is.
+        pub item: RefCell<glib::WeakRef<gtk::ColumnViewCell>>,
+        /// What to ask which record a position is showing.
+        pub records: RefCell<Option<Records>>,
     }
 
     #[glib::object_subclass]
@@ -67,17 +67,22 @@ glib::wrapper! {
 }
 
 impl Number {
-    pub(super) fn new() -> Self {
+    pub(super) fn new(records: Records, item: &gtk::ColumnViewCell) -> Self {
         let number: Self = glib::Object::new();
+        number.imp().records.replace(Some(records));
+        number.imp().item.replace(item.downgrade());
         number.set_accessible_role(gtk::AccessibleRole::RowHeader);
         number.connect_gestures();
         number
     }
 
-    /// Where this number's row sits in the view, which is what the gutter is
-    /// told about when the keyboard moves.
-    pub(super) fn position(&self) -> u32 {
-        self.imp().position.get()
+    /// Where this number's row sits in the view, now.
+    ///
+    /// Asked rather than remembered: a row put in above this one moves it
+    /// without binding it again, and a number that remembered where it was would
+    /// go on saying what the row below it says.
+    pub(super) fn position(&self) -> Option<u32> {
+        super::position_of(&self.imp().item.borrow())
     }
 
     /// Sizes the number to the widest one the file can show, so the gutter does
@@ -96,21 +101,26 @@ impl Number {
         }
     }
 
-    /// Says which row this now counts, and how tall that row is. Files are
-    /// numbered from one everywhere a person will read the number, including in
-    /// every other tool that opens them.
+    /// Says which row this counts, and how tall that row is. Files are numbered
+    /// from one everywhere a person will read the number, including in every
+    /// other tool that opens them.
     ///
     /// The height is asked for rather than taken from the row beside it: that
     /// row is in another view, and a number an inch short of its row would put
     /// every number below it beside the wrong one.
-    pub(super) fn show_row(&self, position: u32, index: usize, lines: usize) {
+    pub(super) fn show_row(&self) {
         let imp = self.imp();
-        imp.position.set(position);
-        imp.index.set(index);
+        let Some(row) = self
+            .position()
+            .zip(imp.records.borrow().clone())
+            .and_then(|(position, records)| records.at(position))
+        else {
+            return;
+        };
         imp.label
-            .set_size_request(-1, super::height_for_lines(&imp.label, lines));
+            .set_size_request(-1, super::height_for_lines(&imp.label, row.lines()));
 
-        let number = (index + 1).to_string();
+        let number = row.number().to_string();
         imp.label.set_text(&number);
         // The label is inside this widget rather than being it, so the number
         // would otherwise be something a screen reader could see but not say.
@@ -156,7 +166,9 @@ impl Number {
     /// there after clicking something on the left edge reads as the table
     /// jumping away.
     fn go_to_row(&self) {
-        let position = self.imp().position.get();
+        let Some(position) = self.position() else {
+            return;
+        };
         self.activate_action("win.go-to", Some(&(position, 0u32).to_variant()))
             .unwrap_or_default();
     }

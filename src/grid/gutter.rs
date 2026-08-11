@@ -24,7 +24,7 @@ use gtk::glib;
 use gtk::prelude::*;
 
 use super::number::Number;
-use super::{Row, as_cell, visit};
+use super::{Records, as_cell, visit};
 
 /// The row numbers beside the table.
 ///
@@ -48,25 +48,26 @@ impl Gutter {
     /// title, nothing to sort by, and the table's own model, so that whatever
     /// the table is showing and in whatever order, this is showing the same.
     pub fn attach(&self, view: &gtk::ColumnView, model: &impl IsA<gtk::SelectionModel>) {
+        let records = Records::new(model);
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(|_, item| {
-            as_cell(item).set_child(Some(&Number::new()));
-        });
+        factory.connect_setup(glib::clone!(
+            #[strong]
+            records,
+            move |_, item| {
+                let item = as_cell(item);
+                item.set_child(Some(&Number::new(records.clone(), item)));
+            }
+        ));
 
         let digits = self.digits.clone();
         let current = self.current.clone();
         factory.connect_bind(move |_, item| {
-            let item = as_cell(item);
-            let Some(number) = item.child().and_downcast::<Number>() else {
+            let Some(number) = as_cell(item).child().and_downcast::<Number>() else {
                 return;
             };
-            let Some(row) = item.item().and_downcast::<Row>() else {
-                return;
-            };
-
             number.set_digits(digits.get());
-            number.show_row(item.position(), row.index(), row.lines());
-            number.set_current(current.get() == Some(item.position()));
+            number.show_row();
+            number.set_current(number.position() == current.get());
         });
 
         view.append_column(
@@ -102,8 +103,20 @@ impl Gutter {
         if self.current.replace(position) == position {
             return;
         }
+        self.each_number(&mut |number| number.set_current(number.position() == position));
+    }
+
+    /// Says the numbers again, for when the rows have moved under them.
+    ///
+    /// A row put in above another moves it without binding it again, which is
+    /// right for the value it holds and wrong for the number beside it: the
+    /// value belongs to the row and the number belongs to the place. The rows on
+    /// screen are asked where they are now.
+    pub fn renumber(&self) {
+        let current = self.current.get();
         self.each_number(&mut |number| {
-            number.set_current(Some(number.position()) == position);
+            number.show_row();
+            number.set_current(number.position() == current);
         });
     }
 

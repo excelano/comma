@@ -148,9 +148,15 @@ impl CommaWindow {
                 }
                 return;
             }
+            // A cell the view has taken back is showing nothing and names no
+            // record, so the cursor stays where it was rather than following the
+            // focus onto a widget on its way somewhere else.
+            let (Some(position), Some(row)) = (cell.position(), cell.row()) else {
+                return;
+            };
             window.set_cursor(Cursor {
-                position: cell.position(),
-                row: cell.row(),
+                position,
+                row,
                 column: cell.column(),
             });
             window.show_reach();

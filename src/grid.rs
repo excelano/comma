@@ -37,6 +37,39 @@ use gtk::prelude::*;
 /// are realised, which reads as the grid shifting under the pointer.
 const DEFAULT_COLUMN_WIDTH: i32 = 160;
 
+/// Which record of the file a row of the view is showing, asked at the moment it
+/// matters rather than remembered from when the row was last bound.
+///
+/// A splice above a row moves it without binding it again. The values it holds
+/// are still that record's values, so the view is right to leave them where they
+/// are, but which record they belong to has moved underneath. So anything that
+/// addresses the document — the number a row shows, the record an edit is written
+/// to — asks where the row is now rather than where it was.
+#[derive(Clone, Debug)]
+pub struct Records(gtk::SelectionModel);
+
+impl Records {
+    pub fn new(model: &impl IsA<gtk::SelectionModel>) -> Self {
+        Self(model.clone().upcast())
+    }
+
+    /// The row a position is showing, or nothing if the view has since moved on
+    /// from that position.
+    pub(crate) fn at(&self, position: u32) -> Option<Row> {
+        self.0.item(position).and_downcast::<Row>()
+    }
+}
+
+/// Where a widget's row sits in the view at this moment.
+///
+/// GTK keeps this current as rows move, which is what makes it worth asking. A
+/// widget that has been handed back and not yet handed out again has no position
+/// at all, and says so.
+pub(crate) fn position_of(item: &glib::WeakRef<gtk::ColumnViewCell>) -> Option<u32> {
+    let position = item.upgrade()?.position();
+    (position != gtk::INVALID_LIST_POSITION).then_some(position)
+}
+
 /// An edit that finished. The grid knows how to take a value from someone; what
 /// to do with it is not its business.
 pub struct Edited {
@@ -55,13 +88,14 @@ pub struct Edited {
 pub fn set_columns(
     column_view: &gtk::ColumnView,
     titles: &[String],
+    records: &Records,
     report: impl Fn(Edited) + 'static,
 ) {
     remove_all_columns(column_view);
 
     let report: Rc<cell::Report> = Rc::new(report);
     for (index, title) in titles.iter().enumerate() {
-        column_view.append_column(&data_column(index, title, report.clone()));
+        column_view.append_column(&data_column(index, title, records.clone(), report.clone()));
     }
 }
 
@@ -71,7 +105,7 @@ pub fn set_columns(
 /// So this says whether it found one, and a caller that has just asked the view
 /// to scroll somewhere can ask again once it has.
 pub fn focus_cell(column_view: &gtk::ColumnView, position: u32, column: usize) -> bool {
-    let wanted = |cell: &Cell| cell.position() == position && cell.column() == column;
+    let wanted = |cell: &Cell| cell.position() == Some(position) && cell.column() == column;
     match find::<Cell>(column_view.upcast_ref(), &wanted) {
         Some(cell) => cell.grab_focus(),
         None => false,
@@ -160,10 +194,15 @@ pub fn gutter_digits(rows: usize) -> i32 {
     rows.to_string().len() as i32
 }
 
-fn data_column(index: usize, title: &str, report: Rc<cell::Report>) -> gtk::ColumnViewColumn {
+fn data_column(
+    index: usize,
+    title: &str,
+    records: Records,
+    report: Rc<cell::Report>,
+) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
     factory.connect_setup(move |_, item| {
-        cell::setup(as_cell(item), index, report.clone());
+        cell::setup(as_cell(item), index, records.clone(), report.clone());
     });
     let heading = title.to_string();
     factory.connect_bind(move |_, item| {
