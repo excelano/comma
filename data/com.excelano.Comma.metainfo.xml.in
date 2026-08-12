@@ -39,6 +39,24 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.7" date="2026-08-12">
+      <description>
+        <p>
+          Comma now notices when something else writes the file it has open. If
+          nothing is unsaved it reads the file again and says so; if there are
+          edits to lose, or a cell is open for typing, it says the file has
+          changed and waits to be asked.
+        </p>
+        <p>
+          Saving over a file that has been written to since Comma read it now
+          asks first, and offers to save this version somewhere else instead.
+        </p>
+        <p>
+          Reading the file again keeps the sorting, the column conditions, how
+          far across the file you had scrolled and the row you were on.
+        </p>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-08-12">
       <description>
         <p>

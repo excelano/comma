@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 16:53-0500\n"
+"POT-Creation-Date: 2026-08-12 17:56-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -67,6 +67,36 @@ msgstr "David M. Anderson"
 
 #: data/com.excelano.Comma.metainfo.xml.in:44
 msgid ""
+"Comma now notices when something else writes the file it has open. If "
+"nothing is unsaved it reads the file again and says so; if there are edits "
+"to lose, or a cell is open for typing, it says the file has changed and "
+"waits to be asked."
+msgstr ""
+"Comma bemerkt jetzt, wenn etwas anderes die geöffnete Datei schreibt. Ist "
+"nichts ungespeichert, liest Comma die Datei neu ein und sagt es; gibt es "
+"Änderungen zu verlieren oder ist eine Zelle zum Tippen geöffnet, meldet "
+"Comma, dass die Datei sich geändert hat, und wartet auf Anweisung."
+
+#: data/com.excelano.Comma.metainfo.xml.in:50
+msgid ""
+"Saving over a file that has been written to since Comma read it now asks "
+"first, and offers to save this version somewhere else instead."
+msgstr ""
+"Das Speichern über eine Datei, die geschrieben wurde, seit Comma sie gelesen "
+"hat, fragt jetzt zuerst nach und bietet an, diese Fassung stattdessen "
+"anderswo zu speichern."
+
+#: data/com.excelano.Comma.metainfo.xml.in:54
+msgid ""
+"Reading the file again keeps the sorting, the column conditions, how far "
+"across the file you had scrolled and the row you were on."
+msgstr ""
+"Beim Neueinlesen bleiben die Sortierung, die Spaltenbedingungen, wie weit "
+"nach rechts Sie geblättert hatten und die Zeile, auf der Sie standen, "
+"erhalten."
+
+#: data/com.excelano.Comma.metainfo.xml.in:62
+msgid ""
 "Fixes a fault that could make Comma stop responding after a cell had been "
 "opened for typing. Every version before this one is affected, so this is "
 "worth updating to."
@@ -75,7 +105,7 @@ msgstr ""
 "eine Zelle zum Tippen geöffnet worden war. Alle früheren Versionen sind "
 "betroffen; ein Update lohnt sich daher."
 
-#: data/com.excelano.Comma.metainfo.xml.in:53
+#: data/com.excelano.Comma.metainfo.xml.in:71
 msgid ""
 "Clicking a row number now moves the keyboard there even in the moment after "
 "a filter or a search has changed what is showing, rather than quietly doing "
@@ -85,7 +115,7 @@ msgstr ""
 "wenn ein Filter oder eine Suche gerade verändert hat, was angezeigt wird, "
 "statt stillschweigend nichts zu tun."
 
-#: data/com.excelano.Comma.metainfo.xml.in:58
+#: data/com.excelano.Comma.metainfo.xml.in:76
 msgid ""
 "Tabbing through the window goes from the toolbar straight into the table. It "
 "used to stop at the row numbers, which answer to the mouse and had no key to "
@@ -95,7 +125,7 @@ msgstr ""
 "Bisher hielt sie bei den Zeilennummern an, die nur auf die Maus reagieren "
 "und keine Taste kennen."
 
-#: data/com.excelano.Comma.metainfo.xml.in:67
+#: data/com.excelano.Comma.metainfo.xml.in:85
 msgid ""
 "Any column can be held to a condition of its own. Right-click its heading "
 "and pick from nine: contains and does not contain, is and is not, is empty "
@@ -108,7 +138,7 @@ msgstr ""
 "und liegt zwischen. Mehrere Spalten können je eine tragen, und sie engen "
 "einander ein."
 
-#: data/com.excelano.Comma.metainfo.xml.in:74
+#: data/com.excelano.Comma.metainfo.xml.in:92
 msgid ""
 "Right-clicking a cell offers the shortest way in — hold this column to the "
 "value already written here. Numbers are read as numbers, so a price above "
@@ -119,7 +149,7 @@ msgstr ""
 "ein Preis über 100 weder eine leere Zelle noch einen in Pfund "
 "ausgezeichneten Preis zutage fördert."
 
-#: data/com.excelano.Comma.metainfo.xml.in:80
+#: data/com.excelano.Comma.metainfo.xml.in:98
 msgid ""
 "Every condition in force is spelled out on a bar under the toolbar with the "
 "button that removes it, and the title now says how many rows of how many are "
@@ -130,7 +160,7 @@ msgstr ""
 "sagt nun, wie viele Zeilen von wie vielen angezeigt werden — gleich ob ein "
 "Filter oder eine Suche die übrigen ausgelassen hat."
 
-#: data/com.excelano.Comma.metainfo.xml.in:90
+#: data/com.excelano.Comma.metainfo.xml.in:108
 msgid ""
 "Wide files draw faster. A file of forty-odd columns took about a second to "
 "put its table on the screen and now takes around half of that, because the "
@@ -143,7 +173,7 @@ msgstr ""
 "Textzeile einmal für das ganze Raster gemessen wird statt erneut für jede "
 "einzelne Zelle darin."
 
-#: data/com.excelano.Comma.metainfo.xml.in:96
+#: data/com.excelano.Comma.metainfo.xml.in:114
 msgid ""
 "Building Comma from source now gives you an optimised binary. Asking Meson "
 "for one had quietly been giving you the opposite."
@@ -151,7 +181,7 @@ msgstr ""
 "Wer Comma aus dem Quelltext baut, bekommt jetzt ein optimiertes Programm. "
 "Meson danach zu fragen hatte still das Gegenteil geliefert."
 
-#: data/com.excelano.Comma.metainfo.xml.in:104
+#: data/com.excelano.Comma.metainfo.xml.in:122
 msgid ""
 "The row numbers stay put when the grid is scrolled sideways, as the column "
 "headings already did, so the number naming a row is beside it however far "
@@ -161,7 +191,7 @@ msgstr ""
 "wie es die Spaltenüberschriften schon taten. So steht die Nummer einer Zeile "
 "neben ihr, wie weit man in einer breiten Datei auch nach rechts gegangen ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:109
+#: data/com.excelano.Comma.metainfo.xml.in:127
 msgid ""
 "A row inserted mid-file no longer misnumbers the rows below it, and an edit "
 "made to one of those rows is written to the row you typed into rather than "
@@ -171,7 +201,7 @@ msgstr ""
 "nicht mehr falsch, und eine Änderung an einer dieser Zeilen wird in die "
 "Zeile geschrieben, in die man getippt hat, statt in die darüber."
 
-#: data/com.excelano.Comma.metainfo.xml.in:118
+#: data/com.excelano.Comma.metainfo.xml.in:136
 msgid ""
 "Files open quickly. A cell now builds its editor when you type in it rather "
 "than when the grid is drawn, so a file of four thousand rows opens in a "
@@ -182,7 +212,7 @@ msgstr ""
 "eine Datei mit viertausend Zeilen in einem Augenblick statt in ein paar "
 "Sekunden, und eine breite Datei gewinnt am meisten."
 
-#: data/com.excelano.Comma.metainfo.xml.in:124
+#: data/com.excelano.Comma.metainfo.xml.in:142
 msgid ""
 "Inserting or deleting a row redraws that row rather than the whole grid, so "
 "the table stays where you had scrolled it to."
@@ -190,7 +220,7 @@ msgstr ""
 "Das Einfügen oder Löschen einer Zeile zeichnet diese Zeile neu statt des "
 "ganzen Rasters, sodass die Tabelle dort bleibt, wohin man gerollt hatte."
 
-#: data/com.excelano.Comma.metainfo.xml.in:132
+#: data/com.excelano.Comma.metainfo.xml.in:150
 msgid ""
 "The first release. Comma opens a delimited file, guesses its delimiter and "
 "says which one it guessed, and edits it as a grid. Rows and columns can be "
@@ -203,7 +233,7 @@ msgstr ""
 "sich rückgängig machen, und beim Speichern ändern sich nur die Zeilen, die "
 "man bearbeitet hat."
 
-#: data/com.excelano.Comma.metainfo.xml.in:138
+#: data/com.excelano.Comma.metainfo.xml.in:156
 msgid ""
 "Sorting and searching are views of the file rather than changes to it, and "
 "one menu item writes a sort order down when you want it. What the grid is "
@@ -396,9 +426,11 @@ msgstr "Spalte löschen"
 
 #: src/window.rs:738
 msgid "Reloaded. Some filters were on columns the file no longer has."
-msgstr "Neu eingelesen. Einige Filter galten für Spalten, die die Datei nicht mehr hat."
+msgstr ""
+"Neu eingelesen. Einige Filter galten für Spalten, die die Datei nicht mehr "
+"hat."
 
-#: src/window.rs:1111
+#: src/window.rs:1118
 msgid "_Close"
 msgstr "S_chließen"
 
