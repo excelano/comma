@@ -17,16 +17,16 @@ use gettextrs::gettext;
 
 use crate::grid::LINE_BREAK;
 use crate::translatable;
-use crate::window::{CommaWindow, key_for_move};
+use crate::window::{CommaWindow, key_for};
 
 /// Where a row's key comes from.
 enum Key {
     /// The accelerator bound to an action.
     Accel(&'static str),
-    /// The key that asks the table for one of its moves.
-    Move(&'static str),
+    /// The key the grid binds itself, for one of the things it does.
+    Grid(&'static str),
     /// An accelerator a widget answers to itself, rather than one bound to an
-    /// action or to a move.
+    /// action or to the grid.
     Handled(&'static str),
 }
 
@@ -45,7 +45,7 @@ const GROUPS: [(&str, &[(&str, Key)]); 4] = [
     (
         translatable("Editing"),
         &[
-            (translatable("Edit the Cell"), Key::Move("edit")),
+            (translatable("Edit the Cell"), Key::Grid("edit")),
             (
                 translatable("Insert a Line Break"),
                 Key::Handled(LINE_BREAK[0]),
@@ -65,14 +65,14 @@ const GROUPS: [(&str, &[(&str, Key)]); 4] = [
     (
         translatable("Moving Around the Table"),
         &[
-            (translatable("One Cell Up"), Key::Move("up")),
-            (translatable("One Cell Down"), Key::Move("down")),
-            (translatable("One Cell Left"), Key::Move("left")),
-            (translatable("One Cell Right"), Key::Move("right")),
-            (translatable("Start of the Row"), Key::Move("row-start")),
-            (translatable("End of the Row"), Key::Move("row-end")),
-            (translatable("Start of the File"), Key::Move("start")),
-            (translatable("End of the File"), Key::Move("end")),
+            (translatable("One Cell Up"), Key::Grid("up")),
+            (translatable("One Cell Down"), Key::Grid("down")),
+            (translatable("One Cell Left"), Key::Grid("left")),
+            (translatable("One Cell Right"), Key::Grid("right")),
+            (translatable("Start of the Row"), Key::Grid("row-start")),
+            (translatable("End of the Row"), Key::Grid("row-end")),
+            (translatable("Start of the File"), Key::Grid("start")),
+            (translatable("End of the File"), Key::Grid("end")),
         ],
     ),
 ];
@@ -120,7 +120,7 @@ fn accelerator(window: &CommaWindow, key: &Key) -> Option<String> {
             let application = window.application()?.downcast::<gtk::Application>().ok()?;
             application.accels_for_action(action).first()?.to_string()
         }
-        Key::Move(how) => key_for_move(how)?.to_string(),
+        Key::Grid(how) => key_for(how)?.to_string(),
         Key::Handled(accelerator) => accelerator.to_string(),
     };
 

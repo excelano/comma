@@ -1,4 +1,5 @@
-// Where the keyboard is in the grid, and the keys that move it.
+// Where the keyboard is in the grid, and the keys the grid answers to:
+// the ones that move the keyboard, and the ones that act where it already is.
 //
 // The cells are recycled underneath the view, so none of them can be asked
 // where the user is working. The window is the only thing that outlives them,
@@ -32,8 +33,8 @@ pub struct Cursor {
 ///
 /// These are bound to the grid rather than to the window, so that the arrow keys
 /// belong to the search box while the search box has the focus, and to the table
-/// the rest of the time.
-const MOVES: [(&str, &str); 13] = [
+/// the rest of the time. The same goes for `ACTS`.
+const MOVES: [(&str, &str); 10] = [
     ("up", "Up"),
     ("down", "Down"),
     ("left", "Left"),
@@ -47,31 +48,48 @@ const MOVES: [(&str, &str); 13] = [
     ("row-end", "End"),
     ("start", "<primary>Home"),
     ("end", "<primary>End"),
-    // The one key that both moves and does something: Enter opens the cell it
-    // is on, and opening a cell that is already open is what commits it.
-    ("edit", "Return"),
-    ("edit", "KP_Enter"),
-    ("edit", "F2"),
 ];
+
+/// One of the things the grid does where the keyboard already is: what it is
+/// called, every key that asks for it, and what it does. Carrying the last of
+/// those is what keeps asking for one by name and doing it a single list.
+type Act = (&'static str, &'static [&'static str], fn(&CommaWindow));
+
+/// What the grid does instead of moving the keyboard.
+///
+/// Opening a cell that is already open is what commits it, which is why Enter
+/// belongs here and not among the moves: it acts on where you are.
+const ACTS: [Act; 1] = [(
+    "edit",
+    &["Return", "KP_Enter", "F2"],
+    CommaWindow::edit_cell,
+)];
 
 /// How many frames to keep looking for a cell the keyboard was sent to before
 /// giving up on it. A handful: the view draws the row it was scrolled to within
 /// a frame or two, and a cell that has not appeared by then is not going to.
 const TRIES: u8 = 8;
 
-/// Which key asks the table for a move, for anything that wants to say so
-/// without spelling it out a second time.
-pub fn key_for_move(how: &str) -> Option<&'static str> {
-    MOVES
+/// Which key asks the grid for one of the things it does, for anything that
+/// wants to say so without spelling it out a second time.
+///
+/// The first key of an act is the one that answers. Three keys open a cell, and
+/// the shortcuts window has one line to name them in.
+pub fn key_for(how: &str) -> Option<&'static str> {
+    let moves = MOVES.iter().map(|(name, key)| (*name, *key));
+    let acts = ACTS
         .iter()
+        .filter_map(|(name, keys, _)| Some((*name, *keys.first()?)));
+    moves
+        .chain(acts)
         .find(|(name, _)| *name == how)
-        .map(|(_, key)| *key)
+        .map(|(_, key)| key)
 }
 
 impl CommaWindow {
-    /// The keys that move around the table, bound to the table rather than to
-    /// the window so that they belong to whatever else has the focus when
-    /// something else does.
+    /// The keys the grid answers to, bound to the table rather than to the
+    /// window so that they belong to whatever else has the focus when something
+    /// else does.
     pub(super) fn setup_navigation(&self) {
         let keys = gtk::ShortcutController::new();
         // Before the widgets inside the table have their say, because the column
@@ -80,35 +98,45 @@ impl CommaWindow {
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
 
         for (how, key) in MOVES {
-            let Some(trigger) = gtk::ShortcutTrigger::parse_string(key) else {
-                continue;
-            };
-
-            // Declining a key rather than always taking it is what lets a cell
-            // that is open for typing keep the keys that belong to typing.
-            let action = gtk::CallbackAction::new(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                #[upgrade_or]
-                glib::Propagation::Proceed,
-                move |_, _| {
-                    if window.typing() {
-                        return glib::Propagation::Proceed;
-                    }
-                    window.move_cursor(how);
-                    glib::Propagation::Stop
-                }
-            ));
-
-            keys.add_shortcut(
-                gtk::Shortcut::builder()
-                    .trigger(&trigger)
-                    .action(&action)
-                    .build(),
-            );
+            self.bind_key(&keys, key, move |window| window.move_cursor(how));
+        }
+        for (_, pressed, act) in ACTS {
+            for key in pressed {
+                self.bind_key(&keys, key, act);
+            }
         }
 
         self.imp().column_view.add_controller(keys);
+    }
+
+    /// Binds one key to the grid, to do one thing.
+    fn bind_key(&self, keys: &gtk::ShortcutController, key: &str, run: impl Fn(&Self) + 'static) {
+        let Some(trigger) = gtk::ShortcutTrigger::parse_string(key) else {
+            return;
+        };
+
+        // Declining a key rather than always taking it is what lets a cell that
+        // is open for typing keep the keys that belong to typing.
+        let action = gtk::CallbackAction::new(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, _| {
+                if window.typing() {
+                    return glib::Propagation::Proceed;
+                }
+                run(&window);
+                glib::Propagation::Stop
+            }
+        ));
+
+        keys.add_shortcut(
+            gtk::Shortcut::builder()
+                .trigger(&trigger)
+                .action(&action)
+                .build(),
+        );
     }
 
     /// Follows the keyboard around the grid. Where it is decides what a row or
@@ -177,10 +205,6 @@ impl CommaWindow {
             self.go_to(0, 0);
             return;
         };
-        if how == "edit" {
-            self.edit_cell();
-            return;
-        }
 
         let rows = imp.sorted.n_items();
         let columns = imp.column_view.columns().n_items();

@@ -14,15 +14,17 @@ use comma::document::{Document, sniff};
 use comma::export::{self, Sheet};
 
 use crate::pdf;
+use crate::translatable;
 
 use super::CommaWindow;
 
-/// The exports, so there is one list of what needs a document open to be worth
-/// offering.
-pub(super) const EXPORTS: [&str; 3] = ["export-pdf", "export-html", "export-ods"];
-
 /// What Comma can write that it will not read back. Each is output: never
 /// reopened, never offered as Save, and never the document.
+///
+/// Everything about an export is here: the action that asks for it, what the
+/// Export submenu calls it, the extension it is offered under, and what the
+/// file chooser says it is. A format left half-declared used to be a menu entry
+/// that was never enabled and said nothing about why.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Format {
     Pdf,
@@ -31,6 +33,27 @@ pub(super) enum Format {
 }
 
 impl Format {
+    /// The exports, in the order the menu offers them.
+    pub(super) const ALL: [Format; 3] = [Self::Pdf, Self::Html, Self::Ods];
+
+    pub(super) fn action(self) -> &'static str {
+        match self {
+            Self::Pdf => "export-pdf",
+            Self::Html => "export-html",
+            Self::Ods => "export-ods",
+        }
+    }
+
+    /// What the Export submenu calls it. Said as what the file will be rather
+    /// than as its extension, because the submenu has already said Export.
+    pub(super) fn label(self) -> &'static str {
+        match self {
+            Self::Pdf => translatable("As PDF…"),
+            Self::Html => translatable("As Web Page…"),
+            Self::Ods => translatable("As Spreadsheet…"),
+        }
+    }
+
     fn extension(self) -> &'static str {
         match self {
             Self::Pdf => "pdf",
@@ -39,11 +62,37 @@ impl Format {
         }
     }
 
+    /// What the file chooser calls it, which is the name of the format rather
+    /// than of the operation.
     fn description(self) -> String {
         match self {
             Self::Pdf => gettext("PDF Document"),
             Self::Html => gettext("Web Page"),
             Self::Ods => gettext("OpenDocument Spreadsheet"),
+        }
+    }
+}
+
+/// What Comma was in the middle of when something went wrong, which is what the
+/// dialog about it is titled by.
+///
+/// The title is here rather than at each place that reports one, because the
+/// same failure is reported from more than one place — opening from three —
+/// and a title reworded in one of them and not the others is a window that
+/// says two things about one failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Task {
+    Open,
+    Save,
+    Export,
+}
+
+impl Task {
+    pub(super) fn failed(self) -> String {
+        match self {
+            Self::Open => gettext("Could Not Open the File"),
+            Self::Save => gettext("Could Not Save the File"),
+            Self::Export => gettext("Could Not Export the File"),
         }
     }
 }
@@ -69,9 +118,7 @@ impl CommaWindow {
             move |result| match result {
                 Ok(file) => window.open_file(&file),
                 Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
-                Err(error) => {
-                    window.report(&gettext("Could Not Open the File"), &error.to_string())
-                }
+                Err(error) => window.report(Task::Open, &error.to_string()),
             },
         );
     }
@@ -80,7 +127,7 @@ impl CommaWindow {
         let bytes = match file.load_contents(gio::Cancellable::NONE) {
             Ok((bytes, _etag)) => bytes,
             Err(error) => {
-                return self.report(&gettext("Could Not Open the File"), &error.to_string());
+                return self.report(Task::Open, &error.to_string());
             }
         };
 
@@ -89,7 +136,7 @@ impl CommaWindow {
         let document = match Document::from_bytes(&bytes, sniff(&bytes)) {
             Ok(document) => document,
             Err(error) => {
-                return self.report(&gettext("Could Not Open the File"), &error.to_string());
+                return self.report(Task::Open, &error.to_string());
             }
         };
 
@@ -130,7 +177,7 @@ impl CommaWindow {
             gio::FileCreateFlags::NONE,
             gio::Cancellable::NONE,
         ) {
-            self.report(&gettext("Could Not Save the File"), &error.to_string());
+            self.report(Task::Save, &error.to_string());
             return false;
         }
 
@@ -164,9 +211,7 @@ impl CommaWindow {
                     window.save_to(&file);
                 }
                 Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
-                Err(error) => {
-                    window.report(&gettext("Could Not Save the File"), &error.to_string())
-                }
+                Err(error) => window.report(Task::Save, &error.to_string()),
             },
         );
     }
@@ -239,15 +284,12 @@ impl CommaWindow {
             move |result| match result {
                 Ok(file) => window.export_to(&file, format),
                 Err(error) if error.matches(gtk::DialogError::Dismissed) => {}
-                Err(error) => {
-                    window.report(&gettext("Could Not Export the File"), &error.to_string())
-                }
+                Err(error) => window.report(Task::Export, &error.to_string()),
             },
         );
     }
 
     fn export_to(&self, file: &gio::File, format: Format) {
-        let failed = gettext("Could Not Export the File");
         let Some(document) = self.imp().rows.document() else {
             return;
         };
@@ -279,7 +321,7 @@ impl CommaWindow {
         };
 
         if let Err(error) = written {
-            self.report(&failed, &error);
+            self.report(Task::Export, &error);
         }
     }
 

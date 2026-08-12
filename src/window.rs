@@ -33,10 +33,10 @@ use crate::shortcuts;
 use crate::translatable;
 
 use cursor::Cursor;
-use files::{EXPORTS, Format};
+use files::{Format, Task};
 use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu};
 
-pub use cursor::key_for_move;
+pub use cursor::key_for;
 
 /// Which way into the file an operation reaches. It is what the operation is
 /// addressed by, and it is what decides which handle offers it: the row numbers
@@ -316,6 +316,19 @@ mod imp {
             window.setup_navigation();
             window.watch_focus();
         }
+
+        /// A popover is parented to the widget it opens over rather than held
+        /// as its child, so nothing takes these two down with the window. Left
+        /// alone they outlive the view they point at, which GTK says so on the
+        /// way out.
+        fn dispose(&self) {
+            for menu in [self.cell_menu.get(), self.row_menu.get()]
+                .into_iter()
+                .flatten()
+            {
+                menu.unparent();
+            }
+        }
     }
 
     impl WidgetImpl for CommaWindow {}
@@ -430,16 +443,6 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.clear_filters())
             .build();
 
-        let export_pdf = gio::ActionEntry::builder("export-pdf")
-            .activate(|window: &Self, _, _| window.export(Format::Pdf))
-            .build();
-        let export_html = gio::ActionEntry::builder("export-html")
-            .activate(|window: &Self, _, _| window.export(Format::Html))
-            .build();
-        let export_ods = gio::ActionEntry::builder("export-ods")
-            .activate(|window: &Self, _, _| window.export(Format::Ods))
-            .build();
-
         let move_cursor = gio::ActionEntry::builder("move-cursor")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(|window: &Self, _, param| {
@@ -533,13 +536,17 @@ impl CommaWindow {
             cell_menu,
             row_menu,
             keyboard,
-            export_pdf,
-            export_html,
-            export_ods,
             commit_order,
             delimiter,
             header,
         ];
+        for format in Format::ALL {
+            entries.push(
+                gio::ActionEntry::builder(format.action())
+                    .activate(move |window: &Self, _, _| window.export(format))
+                    .build(),
+            );
+        }
         for operation in STRUCTURE {
             entries.push(
                 gio::ActionEntry::builder(operation.name)
@@ -910,8 +917,8 @@ impl CommaWindow {
         self.set_action_enabled("save", modified);
         let open = self.imp().rows.document().is_some();
         self.set_action_enabled("save-as", open);
-        for name in EXPORTS {
-            self.set_action_enabled(name, open);
+        for format in Format::ALL {
+            self.set_action_enabled(format.action(), open);
         }
         self.set_action_enabled("undo", undo);
         self.set_action_enabled("redo", redo);
@@ -964,8 +971,10 @@ impl CommaWindow {
         self.set_title(Some(&title));
     }
 
-    fn report(&self, title: &str, message: &str) {
-        let dialog = adw::AlertDialog::new(Some(title), Some(message));
+    /// Says that something did not work, in a dialog titled by what Comma was
+    /// trying to do at the time.
+    fn report(&self, task: Task, message: &str) {
+        let dialog = adw::AlertDialog::new(Some(&task.failed()), Some(message));
         dialog.add_response("close", &gettext("_Close"));
         dialog.present(Some(self));
     }

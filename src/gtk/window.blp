@@ -149,6 +149,11 @@ template $CommaWindow: Adw.ApplicationWindow {
               child: ColumnView gutter_view {
                 show-row-separators: true;
                 reorderable: false;
+                // The numbers answer to the mouse and to nothing else: a press
+                // moves the cursor into that row, and the other button asks what
+                // can be done to it. Tabbing into them would be a stop with no
+                // key to press, so the keyboard goes straight to the cells.
+                can-focus: false;
 
                 styles [
                   "gutter",

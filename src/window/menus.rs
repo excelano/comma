@@ -20,6 +20,7 @@ use gtk::gio;
 
 use comma::document::Dialect;
 
+use super::files::Format;
 use super::{AT_CURSOR, Axis, CommaWindow, STRUCTURE};
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
@@ -166,9 +167,12 @@ pub(super) fn primary_menu() -> gio::Menu {
     );
 
     let exports = gio::Menu::new();
-    exports.append(Some(&gettext("As PDF…")), Some("win.export-pdf"));
-    exports.append(Some(&gettext("As Web Page…")), Some("win.export-html"));
-    exports.append(Some(&gettext("As Spreadsheet…")), Some("win.export-ods"));
+    for format in Format::ALL {
+        exports.append(
+            Some(&gettext(format.label())),
+            Some(&format!("win.{}", format.action())),
+        );
+    }
     let export = gio::Menu::new();
     export.append_submenu(Some(&gettext("_Export")), &exports);
 
