@@ -77,7 +77,12 @@ pub enum Extent {
     /// their place. Every record after the splice is the record it was, so a
     /// view redraws that stretch and keeps its place in the rest.
     Rows { at: usize, gone: usize, come: usize },
-    /// Columns came or went, so nothing can be assumed to be where it was.
+    /// A column at `at` was put in or taken out, so every column after it is
+    /// somewhere else now. Anything holding a column by its number — a filter
+    /// on one — is told which way it moved rather than being thrown away.
+    Columns { at: usize, inserted: bool },
+    /// Enough moved that nothing can be assumed to be where it was, and no
+    /// smaller description would be worth the reading.
     Shape,
 }
 
@@ -130,7 +135,12 @@ impl Change {
                         records[*row].fields.remove(*at);
                     }
                 }
-                Extent::Shape
+                // Taking a change back does the opposite of what it did, so an
+                // insert undone is a column going away.
+                Extent::Columns {
+                    at: *at,
+                    inserted: *inserted == forward,
+                }
             }
             Self::Order { order } => {
                 // Only the fields move. A record's terminator belongs to its

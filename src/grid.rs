@@ -19,7 +19,6 @@ mod cell;
 mod gutter;
 mod model;
 mod number;
-mod order;
 mod row;
 
 pub use cell::{Cell, LINE_BREAK};
@@ -251,7 +250,7 @@ fn value_sorter(index: usize) -> gtk::CustomSorter {
                 .expect("the model holds Rows")
                 .value(index)
         };
-        order::compare(&value(left), &value(right)).into()
+        comma::value::compare(&value(left), &value(right)).into()
     })
 }
 

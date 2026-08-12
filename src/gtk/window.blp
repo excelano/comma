@@ -75,6 +75,37 @@ template $CommaWindow: Adw.ApplicationWindow {
       };
     }
 
+    [top]
+    Box filter_bar {
+      visible: false;
+      orientation: horizontal;
+      spacing: 6;
+
+      styles [
+        "toolbar",
+      ]
+
+      // A file with more filters than fit is a file you can still read them all
+      // of, rather than one that silently shows you some of what is in force.
+      ScrolledWindow {
+        hexpand: true;
+        vscrollbar-policy: never;
+        propagate-natural-height: true;
+
+        child: Box chips {
+          orientation: horizontal;
+          spacing: 6;
+        };
+      }
+
+      Button {
+        label: _("Clear _All");
+        use-underline: true;
+        action-name: "win.clear-filters";
+        tooltip-text: _("Show Every Row Again");
+      }
+    }
+
     content: Stack stack {
       StackPage {
         name: "empty";

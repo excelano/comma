@@ -97,6 +97,10 @@ impl CommaApplication {
         self.set_accels_for_action("win.save", &["<primary>s"]);
         self.set_accels_for_action("win.save-as", &["<primary><shift>s"]);
         self.set_accels_for_action("win.find", &["<primary>f"]);
+        // The target has to say what width of number it is, or GIO reads a bare
+        // -1 as the wrong kind and the accelerator never binds. This one means
+        // the column the cursor is in.
+        self.set_accels_for_action("win.filter-column(int32 -1)", &["<primary><shift>f"]);
         // Both forms, because reaching "?" needs Shift on most layouts and the
         // key that arrives then carries it. Neither fires on every desktop, so
         // the menu item is the way in that always works.

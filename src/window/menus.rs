@@ -5,6 +5,10 @@
 // they belong to, and a menu written down in advance cannot. Building them all
 // the same way is what keeps the four of them saying the same six things.
 //
+// A column offers two kinds of thing, in two sections, and the line between
+// them is the one this app is built on: above it are the changes to the file,
+// and below it the ways of looking at it, which write nothing.
+//
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
@@ -102,10 +106,22 @@ fn section(axis: Axis, at: i32) -> gio::Menu {
 }
 
 /// Both halves, for the places that are on a row and in a column at once.
+///
+/// A cell is the one place that can offer the fastest filter there is, because
+/// it is the only one holding a value: hold this column to what is written
+/// here, in one press and without typing it out again.
 fn whole_menu() -> gio::Menu {
+    let here = gio::Menu::new();
+    here.append(
+        Some(&gettext("Show Only Rows Like This One")),
+        Some("win.filter-to-value"),
+    );
+
     let menu = gio::Menu::new();
     menu.append_section(None, &section(Axis::Row, AT_CURSOR));
     menu.append_section(None, &section(Axis::Column, AT_CURSOR));
+    menu.append_section(None, &here);
+    menu.append_section(None, &views(AT_CURSOR));
     menu
 }
 
@@ -113,7 +129,24 @@ fn whole_menu() -> gio::Menu {
 /// heading's menu without asking first and there is no moment in between to
 /// move the cursor into it.
 pub(super) fn column_menu(column: usize) -> gio::Menu {
-    section(Axis::Column, column as i32)
+    let menu = gio::Menu::new();
+    menu.append_section(None, &section(Axis::Column, column as i32));
+    menu.append_section(None, &views(column as i32));
+    menu
+}
+
+/// The ways of looking at a column, which change nothing about it.
+///
+/// One entry rather than two, because the dialog it opens already knows whether
+/// the column has a condition on it and offers to take it off when it has. A
+/// menu built when the columns were built could not: what is filtered changes
+/// long after.
+fn views(at: i32) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let item = gio::MenuItem::new(Some(&gettext("_Filter This Column…")), None);
+    item.set_action_and_target_value(Some("win.filter-column"), Some(&at.to_variant()));
+    menu.append_item(&item);
+    menu
 }
 
 /// The main menu, in the order it reads.
@@ -122,10 +155,14 @@ pub(super) fn primary_menu() -> gio::Menu {
     history.append(Some(&gettext("_Undo")), Some("win.undo"));
     history.append(Some(&gettext("_Redo")), Some("win.redo"));
 
-    let order = gio::Menu::new();
-    order.append(
+    let view = gio::Menu::new();
+    view.append(
         Some(&gettext("Apply This Order to the File")),
         Some("win.commit-order"),
+    );
+    view.append(
+        Some(&gettext("Clear All Filters")),
+        Some("win.clear-filters"),
     );
 
     let exports = gio::Menu::new();
@@ -148,7 +185,8 @@ pub(super) fn primary_menu() -> gio::Menu {
     menu.append_section(None, &history);
     menu.append_section(None, &section(Axis::Row, AT_CURSOR));
     menu.append_section(None, &section(Axis::Column, AT_CURSOR));
-    menu.append_section(None, &order);
+    menu.append_section(None, &views(AT_CURSOR));
+    menu.append_section(None, &view);
     menu.append_section(None, &export);
     menu.append_section(None, &file);
     menu.append_section(None, &about);

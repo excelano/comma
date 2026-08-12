@@ -18,6 +18,24 @@ pub fn contains(haystack: &str, needle: &str) -> bool {
     find_from(haystack, needle, 0).is_some()
 }
 
+/// Whether two values are the same text, ignoring case.
+///
+/// Folded a character at a time on both sides, for the reason the module gives:
+/// a filter asks this of every cell of the file and neither side should have to
+/// arrive in any particular case.
+pub fn equals(left: &str, right: &str) -> bool {
+    let mut left = left.chars().flat_map(char::to_lowercase);
+    let mut right = right.chars().flat_map(char::to_lowercase);
+
+    loop {
+        match (left.next(), right.next()) {
+            (None, None) => return true,
+            (left, right) if left == right => {}
+            _ => return false,
+        }
+    }
+}
+
 /// `haystack` with every occurrence of `needle` replaced, or `None` when there
 /// was nothing to replace. Saying nothing happened is the point: a cell nothing
 /// matched in is left exactly as the file spelled it.
@@ -87,6 +105,22 @@ mod tests {
         assert!(contains("ADA", "ada"));
         assert!(contains("ada", "ADA"));
         assert!(!contains("Ada", "grace"));
+    }
+
+    #[test]
+    fn the_whole_value_matches_in_whichever_case_it_is_written() {
+        assert!(equals("Active", "active"));
+        assert!(equals("STRASSE", "strasse"));
+        assert!(!equals("active", "inactive"));
+        assert!(!equals("act", "active"));
+        assert!(equals("", ""));
+    }
+
+    #[test]
+    fn folding_case_can_leave_two_values_the_same_length_or_not() {
+        // Turkish İ lowercases to two characters, so equality cannot be decided
+        // by comparing lengths first.
+        assert!(equals("İ", "i\u{307}"));
     }
 
     #[test]

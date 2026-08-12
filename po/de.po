@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 13:09-0500\n"
+"POT-Creation-Date: 2026-08-12 09:25-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -65,7 +65,92 @@ msgstr ""
 msgid "David M. Anderson"
 msgstr "David M. Anderson"
 
-#: src/grid/cell.rs:433
+#: data/com.excelano.Comma.metainfo.xml.in:44
+msgid ""
+"Wide files draw faster. A file of forty-odd columns took about a second to "
+"put its table on the screen and now takes around half of that, because the "
+"height of a line of text is measured once for the whole grid rather than "
+"again for every cell in it."
+msgstr ""
+"Breite Dateien werden schneller gezeichnet. Eine Datei mit gut vierzig "
+"Spalten brauchte etwa eine Sekunde, um ihre Tabelle auf den Bildschirm zu "
+"bringen, und braucht jetzt ungefähr die Hälfte davon, weil die Höhe einer "
+"Textzeile einmal für das ganze Raster gemessen wird statt erneut für jede "
+"einzelne Zelle darin."
+
+#: data/com.excelano.Comma.metainfo.xml.in:50
+msgid ""
+"Building Comma from source now gives you an optimised binary. Asking Meson "
+"for one had quietly been giving you the opposite."
+msgstr ""
+"Wer Comma aus dem Quelltext baut, bekommt jetzt ein optimiertes Programm. "
+"Meson danach zu fragen hatte still das Gegenteil geliefert."
+
+#: data/com.excelano.Comma.metainfo.xml.in:58
+msgid ""
+"The row numbers stay put when the grid is scrolled sideways, as the column "
+"headings already did, so the number naming a row is beside it however far "
+"across a wide file you have gone."
+msgstr ""
+"Die Zeilennummern bleiben stehen, wenn das Raster seitwärts gerollt wird, "
+"wie es die Spaltenüberschriften schon taten. So steht die Nummer einer "
+"Zeile neben ihr, wie weit man in einer breiten Datei auch nach rechts "
+"gegangen ist."
+
+#: data/com.excelano.Comma.metainfo.xml.in:63
+msgid ""
+"A row inserted mid-file no longer misnumbers the rows below it, and an edit "
+"made to one of those rows is written to the row you typed into rather than "
+"to the one above it."
+msgstr ""
+"Eine mitten in der Datei eingefügte Zeile nummeriert die Zeilen darunter "
+"nicht mehr falsch, und eine Änderung an einer dieser Zeilen wird in die "
+"Zeile geschrieben, in die man getippt hat, statt in die darüber."
+
+#: data/com.excelano.Comma.metainfo.xml.in:72
+msgid ""
+"Files open quickly. A cell now builds its editor when you type in it rather "
+"than when the grid is drawn, so a file of four thousand rows opens in a "
+"moment rather than in a couple of seconds, and a wide file gains the most."
+msgstr ""
+"Dateien öffnen sich schnell. Eine Zelle baut ihr Eingabefeld jetzt erst, "
+"wenn man in ihr tippt, statt schon beim Zeichnen des Rasters. So öffnet "
+"sich eine Datei mit viertausend Zeilen in einem Augenblick statt in ein "
+"paar Sekunden, und eine breite Datei gewinnt am meisten."
+
+#: data/com.excelano.Comma.metainfo.xml.in:78
+msgid ""
+"Inserting or deleting a row redraws that row rather than the whole grid, so "
+"the table stays where you had scrolled it to."
+msgstr ""
+"Das Einfügen oder Löschen einer Zeile zeichnet diese Zeile neu statt des "
+"ganzen Rasters, sodass die Tabelle dort bleibt, wohin man gerollt hatte."
+
+#: data/com.excelano.Comma.metainfo.xml.in:86
+msgid ""
+"The first release. Comma opens a delimited file, guesses its delimiter and "
+"says which one it guessed, and edits it as a grid. Rows and columns can be "
+"inserted and deleted, everything can be undone, and saving a file changes "
+"only the lines you edited."
+msgstr ""
+"Die erste Veröffentlichung. Comma öffnet eine getrennte Datei, errät ihr "
+"Trennzeichen und sagt, welches es geraten hat, und bearbeitet sie als "
+"Raster. Zeilen und Spalten lassen sich einfügen und löschen, alles lässt "
+"sich rückgängig machen, und beim Speichern ändern sich nur die Zeilen, die "
+"man bearbeitet hat."
+
+#: data/com.excelano.Comma.metainfo.xml.in:92
+msgid ""
+"Sorting and searching are views of the file rather than changes to it, and "
+"one menu item writes a sort order down when you want it. What the grid is "
+"showing can be exported as a PDF, a web page, or an OpenDocument spreadsheet."
+msgstr ""
+"Sortieren und Suchen sind Sichten auf die Datei und keine Änderungen an "
+"ihr, und ein Menüeintrag schreibt eine Sortierreihenfolge fest, wenn man "
+"es möchte. Was das Raster zeigt, lässt sich als PDF, als Webseite oder als "
+"OpenDocument-Tabelle exportieren."
+
+#: src/grid/cell.rs:529
 msgid "Empty"
 msgstr "Leer"
 
@@ -77,7 +162,7 @@ msgstr "Ö_ffnen"
 msgid "Open a File"
 msgstr "Eine Datei öffnen"
 
-#: src/gtk/window.blp:24 src/window/files.rs:194 src/window/menus.rs:136
+#: src/gtk/window.blp:24 src/window/files.rs:194 src/window/menus.rs:177
 msgid "_Save"
 msgstr "_Speichern"
 
@@ -109,15 +194,23 @@ msgstr "Ersetzen durch"
 msgid "Replace _All"
 msgstr "_Alle ersetzen"
 
-#: src/gtk/window.blp:84
+#: src/gtk/window.blp:102
+msgid "Clear _All"
+msgstr "_Alle entfernen"
+
+#: src/gtk/window.blp:105
+msgid "Show Every Row Again"
+msgstr "Wieder alle Zeilen anzeigen"
+
+#: src/gtk/window.blp:115
 msgid "No File Open"
 msgstr "Keine Datei geöffnet"
 
-#: src/gtk/window.blp:85
+#: src/gtk/window.blp:116
 msgid "Comma edits CSV, TSV, and other delimited text files."
 msgstr "Comma bearbeitet CSV-, TSV- und andere Textdateien mit Trennzeichen."
 
-#: src/gtk/window.blp:88
+#: src/gtk/window.blp:119
 msgid "_Open File…"
 msgstr "Datei ö_ffnen …"
 
@@ -162,70 +255,78 @@ msgid "Redo"
 msgstr "Wiederholen"
 
 #: src/shortcuts.rs:59
+msgid "What the Grid Is Showing"
+msgstr "Was die Tabelle zeigt"
+
+#: src/shortcuts.rs:61
+msgid "Filter This Column"
+msgstr "Diese Spalte filtern"
+
+#: src/shortcuts.rs:66
 msgid "Moving Around the Table"
 msgstr "Bewegen in der Tabelle"
 
-#: src/shortcuts.rs:61
+#: src/shortcuts.rs:68
 msgid "One Cell Up"
 msgstr "Eine Zelle nach oben"
 
-#: src/shortcuts.rs:62
+#: src/shortcuts.rs:69
 msgid "One Cell Down"
 msgstr "Eine Zelle nach unten"
 
-#: src/shortcuts.rs:63
+#: src/shortcuts.rs:70
 msgid "One Cell Left"
 msgstr "Eine Zelle nach links"
 
-#: src/shortcuts.rs:64
+#: src/shortcuts.rs:71
 msgid "One Cell Right"
 msgstr "Eine Zelle nach rechts"
 
-#: src/shortcuts.rs:65
+#: src/shortcuts.rs:72
 msgid "Start of the Row"
 msgstr "Anfang der Zeile"
 
-#: src/shortcuts.rs:66
+#: src/shortcuts.rs:73
 msgid "End of the Row"
 msgstr "Ende der Zeile"
 
-#: src/shortcuts.rs:67
+#: src/shortcuts.rs:74
 msgid "Start of the File"
 msgstr "Anfang der Datei"
 
-#: src/shortcuts.rs:68
+#: src/shortcuts.rs:75
 msgid "End of the File"
 msgstr "Ende der Datei"
 
-#: src/shortcuts.rs:102
+#: src/shortcuts.rs:109
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: src/window.rs:84
+#: src/window.rs:87
 msgid "Insert Row Above"
 msgstr "Zeile darüber einfügen"
 
-#: src/window.rs:92
+#: src/window.rs:95
 msgid "Insert Row Below"
 msgstr "Zeile darunter einfügen"
 
-#: src/window.rs:102
+#: src/window.rs:105
 msgid "Delete Row"
 msgstr "Zeile löschen"
 
-#: src/window.rs:110
+#: src/window.rs:113
 msgid "Insert Column Before"
 msgstr "Spalte davor einfügen"
 
-#: src/window.rs:118
+#: src/window.rs:121
 msgid "Insert Column After"
 msgstr "Spalte danach einfügen"
 
-#: src/window.rs:126
+#: src/window.rs:129
 msgid "Delete Column"
 msgstr "Spalte löschen"
 
-#: src/window.rs:789
+#: src/window.rs:969
 msgid "_Close"
 msgstr "S_chließen"
 
@@ -267,7 +368,7 @@ msgstr ""
 msgid "Save Changes?"
 msgstr "Änderungen speichern?"
 
-#: src/window/files.rs:192
+#: src/window/files.rs:192 src/window/filters.rs:241
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
@@ -300,79 +401,209 @@ msgstr "Text mit Trennzeichen"
 msgid "All Files"
 msgstr "Alle Dateien"
 
-#: src/window/menus.rs:118
+#. Translators: how much of the file the grid is showing, as in
+#. "128 of 4312 rows". %s is the number showing and %t the number
+#. the file holds.
+#: src/window/filters.rs:153
+msgid "%s of %t row"
+msgid_plural "%s of %t rows"
+msgstr[0] "%s von %t Zeile"
+msgstr[1] "%s von %t Zeilen"
+
+#. Translators: the heading of the filter dialog. %c is a column name,
+#. so this reads "Filter Status".
+#: src/window/filters.rs:203
+#, c-format
+msgid "Filter %c"
+msgstr "%c filtern"
+
+#: src/window/filters.rs:212
+msgid "What to Hold This Column To"
+msgstr "Woran diese Spalte gemessen wird"
+
+#: src/window/filters.rs:216
+msgid "Value"
+msgstr "Wert"
+
+#: src/window/filters.rs:220
+msgid "And"
+msgstr "Und"
+
+#: src/window/filters.rs:243
+msgid "_Remove Filter"
+msgstr "Filter _entfernen"
+
+#: src/window/filters.rs:246
+msgid "_Apply"
+msgstr "_Anwenden"
+
+#: src/window/filters.rs:328
+msgid "Change This Filter"
+msgstr "Diesen Filter ändern"
+
+#: src/window/filters.rs:332
+msgid "Remove This Filter"
+msgstr "Diesen Filter entfernen"
+
+#: src/window/filters.rs:359
+msgid "contains"
+msgstr "enthält"
+
+#: src/window/filters.rs:360
+msgid "does not contain"
+msgstr "enthält nicht"
+
+#: src/window/filters.rs:361
+msgid "is"
+msgstr "ist"
+
+#: src/window/filters.rs:362
+msgid "is not"
+msgstr "ist nicht"
+
+#: src/window/filters.rs:363
+msgid "is empty"
+msgstr "ist leer"
+
+#: src/window/filters.rs:364
+msgid "is not empty"
+msgstr "ist nicht leer"
+
+#: src/window/filters.rs:365
+msgid "is greater than"
+msgstr "ist größer als"
+
+#: src/window/filters.rs:366
+msgid "is less than"
+msgstr "ist kleiner als"
+
+#: src/window/filters.rs:367
+msgid "is between"
+msgstr "liegt zwischen"
+
+#: src/window/filters.rs:381
+msgid "%c contains %v"
+msgstr "%c enthält %v"
+
+#: src/window/filters.rs:382
+msgid "%c does not contain %v"
+msgstr "%c enthält nicht %v"
+
+#: src/window/filters.rs:383
+msgid "%c is %v"
+msgstr "%c ist %v"
+
+#: src/window/filters.rs:384
+msgid "%c is not %v"
+msgstr "%c ist nicht %v"
+
+#: src/window/filters.rs:385
+#, c-format
+msgid "%c is empty"
+msgstr "%c ist leer"
+
+#: src/window/filters.rs:386
+#, c-format
+msgid "%c is not empty"
+msgstr "%c ist nicht leer"
+
+#: src/window/filters.rs:387
+msgid "%c is greater than %v"
+msgstr "%c ist größer als %v"
+
+#: src/window/filters.rs:388
+msgid "%c is less than %v"
+msgstr "%c ist kleiner als %v"
+
+#: src/window/filters.rs:389
+msgid "%c is between %v and %w"
+msgstr "%c liegt zwischen %v und %w"
+
+#: src/window/menus.rs:116
+msgid "Show Only Rows Like This One"
+msgstr "Nur Zeilen wie diese anzeigen"
+
+#: src/window/menus.rs:146
+msgid "_Filter This Column…"
+msgstr "Diese _Spalte filtern …"
+
+#: src/window/menus.rs:155
 msgid "_Undo"
 msgstr "_Rückgängig"
 
-#: src/window/menus.rs:119
+#: src/window/menus.rs:156
 msgid "_Redo"
 msgstr "_Wiederholen"
 
-#: src/window/menus.rs:123
+#: src/window/menus.rs:160
 msgid "Apply This Order to the File"
 msgstr "Diese Reihenfolge auf die Datei anwenden"
 
-#: src/window/menus.rs:128
+#: src/window/menus.rs:164
+msgid "Clear All Filters"
+msgstr "Alle Filter entfernen"
+
+#: src/window/menus.rs:169
 msgid "As PDF…"
 msgstr "Als PDF …"
 
-#: src/window/menus.rs:129
+#: src/window/menus.rs:170
 msgid "As Web Page…"
 msgstr "Als Webseite …"
 
-#: src/window/menus.rs:130
+#: src/window/menus.rs:171
 msgid "As Spreadsheet…"
 msgstr "Als Tabellendokument …"
 
-#: src/window/menus.rs:132
+#: src/window/menus.rs:173
 msgid "_Export"
 msgstr "_Exportieren"
 
-#: src/window/menus.rs:135
+#: src/window/menus.rs:176
 msgid "_Open…"
 msgstr "Ö_ffnen …"
 
-#: src/window/menus.rs:137
+#: src/window/menus.rs:178
 msgid "Save _As…"
 msgstr "Speichern _unter …"
 
-#: src/window/menus.rs:140
+#: src/window/menus.rs:181
 msgid "_Keyboard Shortcuts"
 msgstr "_Tastenkürzel"
 
-#: src/window/menus.rs:141
+#: src/window/menus.rs:182
 msgid "_About Comma"
 msgstr "_Info zu Comma"
 
-#: src/window/menus.rs:165
+#: src/window/menus.rs:207
 msgid "First Row Is a Header"
 msgstr "Erste Zeile ist eine Kopfzeile"
 
-#: src/window/menus.rs:168
+#: src/window/menus.rs:210
 msgid "Delimiter"
 msgstr "Trennzeichen"
 
-#: src/window/menus.rs:196
+#: src/window/menus.rs:238
 msgctxt "delimiter"
 msgid "Comma"
 msgstr "Komma"
 
-#: src/window/menus.rs:197
+#: src/window/menus.rs:239
 msgctxt "delimiter"
 msgid "Tab"
 msgstr "Tabulator"
 
-#: src/window/menus.rs:198
+#: src/window/menus.rs:240
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr "Semikolon"
 
-#: src/window/menus.rs:199
+#: src/window/menus.rs:241
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr "Senkrechter Strich"
 
-#: src/window/menus.rs:200
+#: src/window/menus.rs:242
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr "ASCII-Trennzeichen"

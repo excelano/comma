@@ -4,6 +4,11 @@
 // two operations that turn a view into a change — Replace All and writing the
 // order down — are here as well, next to the views they act on.
 //
+// The conditions on the columns are the third view and live next door in
+// `filters`, because there is a good deal more to asking for one than to asking
+// for a search. What they have in common is here: one filter on the model
+// answers for both, so a row shows only when it survives the two of them.
+//
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
@@ -69,10 +74,16 @@ impl CommaWindow {
         self.show_state();
     }
 
+    /// Whether a row survives everything asked of it: the conditions on the
+    /// columns, and then what is being searched for.
+    ///
+    /// The conditions go first because they are the cheaper question. Each one
+    /// reads a single cell, and a search reads the whole row.
     fn row_matches(&self, object: &glib::Object) -> bool {
         let imp = self.imp();
         let needle = imp.needle.borrow();
-        if needle.is_empty() {
+        let filters = imp.filters.borrow();
+        if needle.is_empty() && filters.is_empty() {
             return true;
         }
 
@@ -82,6 +93,16 @@ impl CommaWindow {
         };
         let document = document.borrow();
         let row = row.index();
+
+        // A column this record is too short to reach reads as empty, which is
+        // what it looks like on screen and what the condition should be asked
+        // about.
+        if !filters.admits(|column| document.value(row, column)) {
+            return false;
+        }
+        if needle.is_empty() {
+            return true;
+        }
 
         (0..document.field_count(row))
             .any(|column| search::contains(document.value(row, column), &needle))
@@ -182,11 +203,11 @@ impl CommaWindow {
     }
 
     /// Whether the grid is showing the file the way the file is: every row, in
-    /// the order the file holds them. A sort and a search each make it show
-    /// something else, and the operations that name a place next to a row have
-    /// nothing to name while they do.
+    /// the order the file holds them. A sort, a search and a filter each make it
+    /// show something else, and the operations that name a place next to a row
+    /// have nothing to name while they do.
     pub(super) fn showing_file_order(&self) -> bool {
-        self.sorted_by().is_none() && self.imp().needle.borrow().is_empty()
+        self.sorted_by().is_none() && !self.hiding_rows()
     }
 
     /// Which data column the grid is sorted by, and which way, when it is

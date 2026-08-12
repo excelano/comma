@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-10 13:09-0500\n"
+"POT-Creation-Date: 2026-08-12 09:25-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #: data/com.excelano.Comma.desktop.in:2
 #: data/com.excelano.Comma.metainfo.xml.in:5 src/gtk/window.blp:5
@@ -56,7 +57,63 @@ msgstr ""
 msgid "David M. Anderson"
 msgstr ""
 
-#: src/grid/cell.rs:433
+#: data/com.excelano.Comma.metainfo.xml.in:44
+msgid ""
+"Wide files draw faster. A file of forty-odd columns took about a second to "
+"put its table on the screen and now takes around half of that, because the "
+"height of a line of text is measured once for the whole grid rather than "
+"again for every cell in it."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:50
+msgid ""
+"Building Comma from source now gives you an optimised binary. Asking Meson "
+"for one had quietly been giving you the opposite."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:58
+msgid ""
+"The row numbers stay put when the grid is scrolled sideways, as the column "
+"headings already did, so the number naming a row is beside it however far "
+"across a wide file you have gone."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:63
+msgid ""
+"A row inserted mid-file no longer misnumbers the rows below it, and an edit "
+"made to one of those rows is written to the row you typed into rather than "
+"to the one above it."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:72
+msgid ""
+"Files open quickly. A cell now builds its editor when you type in it rather "
+"than when the grid is drawn, so a file of four thousand rows opens in a "
+"moment rather than in a couple of seconds, and a wide file gains the most."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:78
+msgid ""
+"Inserting or deleting a row redraws that row rather than the whole grid, so "
+"the table stays where you had scrolled it to."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:86
+msgid ""
+"The first release. Comma opens a delimited file, guesses its delimiter and "
+"says which one it guessed, and edits it as a grid. Rows and columns can be "
+"inserted and deleted, everything can be undone, and saving a file changes "
+"only the lines you edited."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:92
+msgid ""
+"Sorting and searching are views of the file rather than changes to it, and "
+"one menu item writes a sort order down when you want it. What the grid is "
+"showing can be exported as a PDF, a web page, or an OpenDocument spreadsheet."
+msgstr ""
+
+#: src/grid/cell.rs:529
 msgid "Empty"
 msgstr ""
 
@@ -68,7 +125,7 @@ msgstr ""
 msgid "Open a File"
 msgstr ""
 
-#: src/gtk/window.blp:24 src/window/files.rs:194 src/window/menus.rs:136
+#: src/gtk/window.blp:24 src/window/files.rs:194 src/window/menus.rs:177
 msgid "_Save"
 msgstr ""
 
@@ -100,15 +157,23 @@ msgstr ""
 msgid "Replace _All"
 msgstr ""
 
-#: src/gtk/window.blp:84
+#: src/gtk/window.blp:102
+msgid "Clear _All"
+msgstr ""
+
+#: src/gtk/window.blp:105
+msgid "Show Every Row Again"
+msgstr ""
+
+#: src/gtk/window.blp:115
 msgid "No File Open"
 msgstr ""
 
-#: src/gtk/window.blp:85
+#: src/gtk/window.blp:116
 msgid "Comma edits CSV, TSV, and other delimited text files."
 msgstr ""
 
-#: src/gtk/window.blp:88
+#: src/gtk/window.blp:119
 msgid "_Open File…"
 msgstr ""
 
@@ -153,70 +218,78 @@ msgid "Redo"
 msgstr ""
 
 #: src/shortcuts.rs:59
-msgid "Moving Around the Table"
+msgid "What the Grid Is Showing"
 msgstr ""
 
 #: src/shortcuts.rs:61
-msgid "One Cell Up"
-msgstr ""
-
-#: src/shortcuts.rs:62
-msgid "One Cell Down"
-msgstr ""
-
-#: src/shortcuts.rs:63
-msgid "One Cell Left"
-msgstr ""
-
-#: src/shortcuts.rs:64
-msgid "One Cell Right"
-msgstr ""
-
-#: src/shortcuts.rs:65
-msgid "Start of the Row"
+msgid "Filter This Column"
 msgstr ""
 
 #: src/shortcuts.rs:66
-msgid "End of the Row"
-msgstr ""
-
-#: src/shortcuts.rs:67
-msgid "Start of the File"
+msgid "Moving Around the Table"
 msgstr ""
 
 #: src/shortcuts.rs:68
+msgid "One Cell Up"
+msgstr ""
+
+#: src/shortcuts.rs:69
+msgid "One Cell Down"
+msgstr ""
+
+#: src/shortcuts.rs:70
+msgid "One Cell Left"
+msgstr ""
+
+#: src/shortcuts.rs:71
+msgid "One Cell Right"
+msgstr ""
+
+#: src/shortcuts.rs:72
+msgid "Start of the Row"
+msgstr ""
+
+#: src/shortcuts.rs:73
+msgid "End of the Row"
+msgstr ""
+
+#: src/shortcuts.rs:74
+msgid "Start of the File"
+msgstr ""
+
+#: src/shortcuts.rs:75
 msgid "End of the File"
 msgstr ""
 
-#: src/shortcuts.rs:102
+#: src/shortcuts.rs:109
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:84
+#: src/window.rs:87
 msgid "Insert Row Above"
 msgstr ""
 
-#: src/window.rs:92
+#: src/window.rs:95
 msgid "Insert Row Below"
 msgstr ""
 
-#: src/window.rs:102
+#: src/window.rs:105
 msgid "Delete Row"
 msgstr ""
 
-#: src/window.rs:110
+#: src/window.rs:113
 msgid "Insert Column Before"
 msgstr ""
 
-#: src/window.rs:118
+#: src/window.rs:121
 msgid "Insert Column After"
 msgstr ""
 
-#: src/window.rs:126
+#: src/window.rs:129
 msgid "Delete Column"
 msgstr ""
 
-#: src/window.rs:789
+#: src/window.rs:969
 msgid "_Close"
 msgstr ""
 
@@ -256,7 +329,7 @@ msgstr ""
 msgid "Save Changes?"
 msgstr ""
 
-#: src/window/files.rs:192
+#: src/window/files.rs:192 src/window/filters.rs:241
 msgid "_Cancel"
 msgstr ""
 
@@ -288,79 +361,209 @@ msgstr ""
 msgid "All Files"
 msgstr ""
 
-#: src/window/menus.rs:118
+#. Translators: how much of the file the grid is showing, as in
+#. "128 of 4312 rows". %s is the number showing and %t the number
+#. the file holds.
+#: src/window/filters.rs:153
+msgid "%s of %t row"
+msgid_plural "%s of %t rows"
+msgstr[0] ""
+msgstr[1] ""
+
+#. Translators: the heading of the filter dialog. %c is a column name,
+#. so this reads "Filter Status".
+#: src/window/filters.rs:203
+#, c-format
+msgid "Filter %c"
+msgstr ""
+
+#: src/window/filters.rs:212
+msgid "What to Hold This Column To"
+msgstr ""
+
+#: src/window/filters.rs:216
+msgid "Value"
+msgstr ""
+
+#: src/window/filters.rs:220
+msgid "And"
+msgstr ""
+
+#: src/window/filters.rs:243
+msgid "_Remove Filter"
+msgstr ""
+
+#: src/window/filters.rs:246
+msgid "_Apply"
+msgstr ""
+
+#: src/window/filters.rs:328
+msgid "Change This Filter"
+msgstr ""
+
+#: src/window/filters.rs:332
+msgid "Remove This Filter"
+msgstr ""
+
+#: src/window/filters.rs:359
+msgid "contains"
+msgstr ""
+
+#: src/window/filters.rs:360
+msgid "does not contain"
+msgstr ""
+
+#: src/window/filters.rs:361
+msgid "is"
+msgstr ""
+
+#: src/window/filters.rs:362
+msgid "is not"
+msgstr ""
+
+#: src/window/filters.rs:363
+msgid "is empty"
+msgstr ""
+
+#: src/window/filters.rs:364
+msgid "is not empty"
+msgstr ""
+
+#: src/window/filters.rs:365
+msgid "is greater than"
+msgstr ""
+
+#: src/window/filters.rs:366
+msgid "is less than"
+msgstr ""
+
+#: src/window/filters.rs:367
+msgid "is between"
+msgstr ""
+
+#: src/window/filters.rs:381
+msgid "%c contains %v"
+msgstr ""
+
+#: src/window/filters.rs:382
+msgid "%c does not contain %v"
+msgstr ""
+
+#: src/window/filters.rs:383
+msgid "%c is %v"
+msgstr ""
+
+#: src/window/filters.rs:384
+msgid "%c is not %v"
+msgstr ""
+
+#: src/window/filters.rs:385
+#, c-format
+msgid "%c is empty"
+msgstr ""
+
+#: src/window/filters.rs:386
+#, c-format
+msgid "%c is not empty"
+msgstr ""
+
+#: src/window/filters.rs:387
+msgid "%c is greater than %v"
+msgstr ""
+
+#: src/window/filters.rs:388
+msgid "%c is less than %v"
+msgstr ""
+
+#: src/window/filters.rs:389
+msgid "%c is between %v and %w"
+msgstr ""
+
+#: src/window/menus.rs:116
+msgid "Show Only Rows Like This One"
+msgstr ""
+
+#: src/window/menus.rs:146
+msgid "_Filter This Column…"
+msgstr ""
+
+#: src/window/menus.rs:155
 msgid "_Undo"
 msgstr ""
 
-#: src/window/menus.rs:119
+#: src/window/menus.rs:156
 msgid "_Redo"
 msgstr ""
 
-#: src/window/menus.rs:123
+#: src/window/menus.rs:160
 msgid "Apply This Order to the File"
 msgstr ""
 
-#: src/window/menus.rs:128
+#: src/window/menus.rs:164
+msgid "Clear All Filters"
+msgstr ""
+
+#: src/window/menus.rs:169
 msgid "As PDF…"
 msgstr ""
 
-#: src/window/menus.rs:129
+#: src/window/menus.rs:170
 msgid "As Web Page…"
 msgstr ""
 
-#: src/window/menus.rs:130
+#: src/window/menus.rs:171
 msgid "As Spreadsheet…"
 msgstr ""
 
-#: src/window/menus.rs:132
+#: src/window/menus.rs:173
 msgid "_Export"
 msgstr ""
 
-#: src/window/menus.rs:135
+#: src/window/menus.rs:176
 msgid "_Open…"
 msgstr ""
 
-#: src/window/menus.rs:137
+#: src/window/menus.rs:178
 msgid "Save _As…"
 msgstr ""
 
-#: src/window/menus.rs:140
+#: src/window/menus.rs:181
 msgid "_Keyboard Shortcuts"
 msgstr ""
 
-#: src/window/menus.rs:141
+#: src/window/menus.rs:182
 msgid "_About Comma"
 msgstr ""
 
-#: src/window/menus.rs:165
+#: src/window/menus.rs:207
 msgid "First Row Is a Header"
 msgstr ""
 
-#: src/window/menus.rs:168
+#: src/window/menus.rs:210
 msgid "Delimiter"
 msgstr ""
 
-#: src/window/menus.rs:196
+#: src/window/menus.rs:238
 msgctxt "delimiter"
 msgid "Comma"
 msgstr ""
 
-#: src/window/menus.rs:197
+#: src/window/menus.rs:239
 msgctxt "delimiter"
 msgid "Tab"
 msgstr ""
 
-#: src/window/menus.rs:198
+#: src/window/menus.rs:240
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr ""
 
-#: src/window/menus.rs:199
+#: src/window/menus.rs:241
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr ""
 
-#: src/window/menus.rs:200
+#: src/window/menus.rs:242
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr ""

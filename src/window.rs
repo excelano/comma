@@ -11,6 +11,7 @@
 
 mod cursor;
 mod files;
+mod filters;
 mod menus;
 mod showing;
 
@@ -23,6 +24,7 @@ use gtk::gio;
 use gtk::glib;
 
 use comma::document::{Dialect, Document, Extent};
+use comma::filter::Filters;
 
 use crate::application::CommaApplication;
 use crate::config::APP_ID;
@@ -183,6 +185,12 @@ mod imp {
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
         pub replacement: TemplateChild<gtk::Entry>,
+        /// The bar that says which conditions the columns are being held to,
+        /// and the box the chips saying so are put in.
+        #[template_child]
+        pub filter_bar: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub chips: TemplateChild<gtk::Box>,
         pub rows: RowModel,
         /// The row numbers, in a view of their own beside the table.
         pub gutter: Gutter,
@@ -194,6 +202,9 @@ mod imp {
         pub sorted: gtk::SortListModel,
         /// What is being searched for. Empty means nothing is.
         pub needle: RefCell<String>,
+        /// What each column is being held to, at most one condition apiece.
+        /// Empty means every row the search leaves is shown.
+        pub filters: RefCell<Filters>,
         /// The file the document was read from, and the one Save writes back
         /// to.
         pub file: RefCell<Option<gio::File>>,
@@ -230,11 +241,14 @@ mod imp {
                 search_bar: TemplateChild::default(),
                 search_entry: TemplateChild::default(),
                 replacement: TemplateChild::default(),
+                filter_bar: TemplateChild::default(),
+                chips: TemplateChild::default(),
                 rows: RowModel::default(),
                 gutter: Gutter::default(),
                 shown: gtk::FilterListModel::default(),
                 sorted: gtk::SortListModel::default(),
                 needle: RefCell::default(),
+                filters: RefCell::default(),
                 file: RefCell::default(),
                 current: Cell::default(),
                 previous_sort: Cell::default(),
@@ -298,6 +312,7 @@ mod imp {
             self.menu_button.set_menu_model(Some(&primary_menu()));
             self.dialect_button.set_menu_model(Some(&reading_menu()));
             window.setup_search();
+            window.setup_filters();
             window.setup_navigation();
             window.watch_focus();
         }
@@ -385,6 +400,34 @@ impl CommaWindow {
 
         let replace_all = gio::ActionEntry::builder("replace-all")
             .activate(|window: &Self, _, _| window.replace_all())
+            .build();
+
+        let filter_column = gio::ActionEntry::builder("filter-column")
+            .parameter_type(Some(
+                glib::VariantTy::new(TARGET).expect("a column, or the one the cursor is in"),
+            ))
+            .activate(|window: &Self, _, param| {
+                let at = param.and_then(|at| at.get::<i32>()).unwrap_or(AT_CURSOR);
+                window.filter_column(at);
+            })
+            .build();
+
+        let filter_to_value = gio::ActionEntry::builder("filter-to-value")
+            .activate(|window: &Self, _, _| window.filter_to_value())
+            .build();
+
+        let clear_filter = gio::ActionEntry::builder("clear-filter")
+            .parameter_type(Some(
+                glib::VariantTy::new(TARGET).expect("a column, or the one the cursor is in"),
+            ))
+            .activate(|window: &Self, _, param| {
+                let at = param.and_then(|at| at.get::<i32>()).unwrap_or(AT_CURSOR);
+                window.clear_filter(at);
+            })
+            .build();
+
+        let clear_filters = gio::ActionEntry::builder("clear-filters")
+            .activate(|window: &Self, _, _| window.clear_filters())
             .build();
 
         let export_pdf = gio::ActionEntry::builder("export-pdf")
@@ -481,6 +524,10 @@ impl CommaWindow {
             redo,
             find,
             replace_all,
+            filter_column,
+            filter_to_value,
+            clear_filter,
+            clear_filters,
             move_cursor,
             go_to,
             cell_menu,
@@ -519,6 +566,10 @@ impl CommaWindow {
             "redo",
             "commit-order",
             "replace-all",
+            "filter-column",
+            "filter-to-value",
+            "clear-filter",
+            "clear-filters",
         ] {
             self.set_action_enabled(name, false);
         }
@@ -568,6 +619,11 @@ impl CommaWindow {
     fn show(&self, document: Document) {
         let imp = self.imp();
 
+        // The conditions were about the columns of another file, or of this one
+        // read under a delimiter that gave it different ones. Either way there
+        // is nothing left for them to be about.
+        self.forget_filters();
+
         // A file starts at its beginning. The cursor is where an operation
         // lands, so leaving it undecided until the keyboard arrives would mean
         // a menu full of things greyed out on a file that is plainly there.
@@ -584,6 +640,7 @@ impl CommaWindow {
 
         imp.rows.set_document(document);
         self.rebuild_columns();
+        self.show_filters();
         self.show_dialect();
         self.show_state();
 
@@ -635,6 +692,13 @@ impl CommaWindow {
                 }
                 self.show_state();
             }
+            Extent::Columns { at, inserted } => {
+                // The conditions are held by column number and a column has
+                // just moved, so they follow it before anything reads them
+                // again. Redrawing the grid is what reads them again.
+                self.columns_moved(at, inserted);
+                self.reload();
+            }
             Extent::Rows { at, gone, come } => self.reload_rows(at, gone, come),
             Extent::Shape => self.reload(),
         }
@@ -675,6 +739,9 @@ impl CommaWindow {
     fn reload(&self) {
         self.imp().rows.reload();
         self.rebuild_columns();
+        // A chip names its column, and a reload is the one moment that name can
+        // have changed underneath it.
+        self.show_filters();
         self.show_state();
     }
 
@@ -851,15 +918,28 @@ impl CommaWindow {
         let searching = !self.imp().needle.borrow().is_empty();
         self.set_action_enabled("replace-all", searching);
         // An order cannot be written down from a view that is not showing every
-        // row it would put in order.
-        self.set_action_enabled("commit-order", self.sorted_by().is_some() && !searching);
+        // row it would put in order, and either a search or a filter can be why
+        // it is not.
+        let hiding = self.hiding_rows();
+        self.set_action_enabled("commit-order", self.sorted_by().is_some() && !hiding);
+
+        for name in ["filter-column", "clear-filter"] {
+            self.set_action_enabled(name, open);
+        }
+        self.set_action_enabled("clear-filters", !self.imp().filters.borrow().is_empty());
 
         self.show_reach();
     }
 
     /// Which row and column operations have somewhere to happen.
+    ///
+    /// Read again every time the cursor moves rather than only when the file
+    /// changes, because what is reachable follows where you are.
     fn show_reach(&self) {
         let cell = self.current_cell().is_some();
+        // Holding a column to the value in front of you needs a value in front
+        // of you.
+        self.set_action_enabled("filter-to-value", cell);
         let document = self.imp().rows.document().is_some();
         let file_order = self.showing_file_order();
         for operation in STRUCTURE {

@@ -32,7 +32,7 @@ enum Key {
 
 /// What the list says, in the order it says it. The descriptions are written
 /// here; the keys are not.
-const GROUPS: [(&str, &[(&str, Key)]); 3] = [
+const GROUPS: [(&str, &[(&str, Key)]); 4] = [
     (
         translatable("File"),
         &[
@@ -54,6 +54,13 @@ const GROUPS: [(&str, &[(&str, Key)]); 3] = [
             (translatable("Redo"), Key::Accel("win.redo")),
             (translatable("Find and Replace"), Key::Accel("win.find")),
         ],
+    ),
+    (
+        translatable("What the Grid Is Showing"),
+        &[(
+            translatable("Filter This Column"),
+            Key::Accel("win.filter-column(int32 -1)"),
+        )],
     ),
     (
         translatable("Moving Around the Table"),

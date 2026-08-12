@@ -7,4 +7,5 @@ src/pdf.rs
 src/shortcuts.rs
 src/window.rs
 src/window/files.rs
+src/window/filters.rs
 src/window/menus.rs

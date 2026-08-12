@@ -172,7 +172,13 @@ fn undoing_a_column_puts_back_the_spelling_of_the_fields_it_took() {
     document.delete_column(1);
     assert_ne!(visible(&document.to_bytes()), visible(&original));
 
-    assert_eq!(document.undo(), Some(Extent::Shape));
+    assert_eq!(
+        document.undo(),
+        Some(Extent::Columns {
+            at: 1,
+            inserted: true
+        })
+    );
     assert_eq!(visible(&document.to_bytes()), visible(&original));
 }
 
@@ -224,7 +230,13 @@ fn a_structural_change_is_one_thing_to_undo() {
     document.insert_column(1);
     assert_eq!(document.column_count(), 4);
 
-    assert_eq!(document.undo(), Some(Extent::Shape));
+    assert_eq!(
+        document.undo(),
+        Some(Extent::Columns {
+            at: 1,
+            inserted: false
+        })
+    );
     assert_eq!(document.column_count(), 3);
     assert!(
         !document.can_undo(),
