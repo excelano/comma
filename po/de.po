@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 09:25-0500\n"
+"POT-Creation-Date: 2026-08-12 09:47-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -67,6 +67,41 @@ msgstr "David M. Anderson"
 
 #: data/com.excelano.Comma.metainfo.xml.in:44
 msgid ""
+"Any column can be held to a condition of its own. Right-click its heading "
+"and pick from nine: contains and does not contain, is and is not, is empty "
+"and is not empty, is greater than, is less than, and is between. Several "
+"columns can each carry one, and they narrow one another."
+msgstr ""
+"Jede Spalte kann an eine eigene Bedingung gebunden werden. Ein Rechtsklick "
+"auf ihre Überschrift bietet neun zur Auswahl: enthält und enthält nicht, "
+"ist und ist nicht, ist leer und ist nicht leer, ist größer als, ist kleiner "
+"als und liegt zwischen. Mehrere Spalten können je eine tragen, und sie "
+"engen einander ein."
+
+#: data/com.excelano.Comma.metainfo.xml.in:51
+msgid ""
+"Right-clicking a cell offers the shortest way in — hold this column to the "
+"value already written here. Numbers are read as numbers, so a price above "
+"100 turns up neither a blank cell nor one priced in sterling."
+msgstr ""
+"Ein Rechtsklick auf eine Zelle bietet den kürzesten Weg: diese Spalte an "
+"den Wert binden, der hier schon steht. Zahlen werden als Zahlen gelesen, "
+"sodass ein Preis über 100 weder eine leere Zelle noch einen in Pfund "
+"ausgezeichneten Preis zutage fördert."
+
+#: data/com.excelano.Comma.metainfo.xml.in:57
+msgid ""
+"Every condition in force is spelled out on a bar under the toolbar with the "
+"button that removes it, and the title now says how many rows of how many are "
+"showing, whether a filter or a search is what left them out."
+msgstr ""
+"Jede geltende Bedingung steht ausgeschrieben auf einer Leiste unter der "
+"Werkzeugleiste, mitsamt der Schaltfläche, die sie entfernt, und der Titel "
+"sagt nun, wie viele Zeilen von wie vielen angezeigt werden — gleich ob ein "
+"Filter oder eine Suche die übrigen ausgelassen hat."
+
+#: data/com.excelano.Comma.metainfo.xml.in:67
+msgid ""
 "Wide files draw faster. A file of forty-odd columns took about a second to "
 "put its table on the screen and now takes around half of that, because the "
 "height of a line of text is measured once for the whole grid rather than "
@@ -78,7 +113,7 @@ msgstr ""
 "Textzeile einmal für das ganze Raster gemessen wird statt erneut für jede "
 "einzelne Zelle darin."
 
-#: data/com.excelano.Comma.metainfo.xml.in:50
+#: data/com.excelano.Comma.metainfo.xml.in:73
 msgid ""
 "Building Comma from source now gives you an optimised binary. Asking Meson "
 "for one had quietly been giving you the opposite."
@@ -86,18 +121,17 @@ msgstr ""
 "Wer Comma aus dem Quelltext baut, bekommt jetzt ein optimiertes Programm. "
 "Meson danach zu fragen hatte still das Gegenteil geliefert."
 
-#: data/com.excelano.Comma.metainfo.xml.in:58
+#: data/com.excelano.Comma.metainfo.xml.in:81
 msgid ""
 "The row numbers stay put when the grid is scrolled sideways, as the column "
 "headings already did, so the number naming a row is beside it however far "
 "across a wide file you have gone."
 msgstr ""
 "Die Zeilennummern bleiben stehen, wenn das Raster seitwärts gerollt wird, "
-"wie es die Spaltenüberschriften schon taten. So steht die Nummer einer "
-"Zeile neben ihr, wie weit man in einer breiten Datei auch nach rechts "
-"gegangen ist."
+"wie es die Spaltenüberschriften schon taten. So steht die Nummer einer Zeile "
+"neben ihr, wie weit man in einer breiten Datei auch nach rechts gegangen ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:63
+#: data/com.excelano.Comma.metainfo.xml.in:86
 msgid ""
 "A row inserted mid-file no longer misnumbers the rows below it, and an edit "
 "made to one of those rows is written to the row you typed into rather than "
@@ -107,18 +141,18 @@ msgstr ""
 "nicht mehr falsch, und eine Änderung an einer dieser Zeilen wird in die "
 "Zeile geschrieben, in die man getippt hat, statt in die darüber."
 
-#: data/com.excelano.Comma.metainfo.xml.in:72
+#: data/com.excelano.Comma.metainfo.xml.in:95
 msgid ""
 "Files open quickly. A cell now builds its editor when you type in it rather "
 "than when the grid is drawn, so a file of four thousand rows opens in a "
 "moment rather than in a couple of seconds, and a wide file gains the most."
 msgstr ""
 "Dateien öffnen sich schnell. Eine Zelle baut ihr Eingabefeld jetzt erst, "
-"wenn man in ihr tippt, statt schon beim Zeichnen des Rasters. So öffnet "
-"sich eine Datei mit viertausend Zeilen in einem Augenblick statt in ein "
-"paar Sekunden, und eine breite Datei gewinnt am meisten."
+"wenn man in ihr tippt, statt schon beim Zeichnen des Rasters. So öffnet sich "
+"eine Datei mit viertausend Zeilen in einem Augenblick statt in ein paar "
+"Sekunden, und eine breite Datei gewinnt am meisten."
 
-#: data/com.excelano.Comma.metainfo.xml.in:78
+#: data/com.excelano.Comma.metainfo.xml.in:101
 msgid ""
 "Inserting or deleting a row redraws that row rather than the whole grid, so "
 "the table stays where you had scrolled it to."
@@ -126,7 +160,7 @@ msgstr ""
 "Das Einfügen oder Löschen einer Zeile zeichnet diese Zeile neu statt des "
 "ganzen Rasters, sodass die Tabelle dort bleibt, wohin man gerollt hatte."
 
-#: data/com.excelano.Comma.metainfo.xml.in:86
+#: data/com.excelano.Comma.metainfo.xml.in:109
 msgid ""
 "The first release. Comma opens a delimited file, guesses its delimiter and "
 "says which one it guessed, and edits it as a grid. Rows and columns can be "
@@ -139,15 +173,15 @@ msgstr ""
 "sich rückgängig machen, und beim Speichern ändern sich nur die Zeilen, die "
 "man bearbeitet hat."
 
-#: data/com.excelano.Comma.metainfo.xml.in:92
+#: data/com.excelano.Comma.metainfo.xml.in:115
 msgid ""
 "Sorting and searching are views of the file rather than changes to it, and "
 "one menu item writes a sort order down when you want it. What the grid is "
 "showing can be exported as a PDF, a web page, or an OpenDocument spreadsheet."
 msgstr ""
-"Sortieren und Suchen sind Sichten auf die Datei und keine Änderungen an "
-"ihr, und ein Menüeintrag schreibt eine Sortierreihenfolge fest, wenn man "
-"es möchte. Was das Raster zeigt, lässt sich als PDF, als Webseite oder als "
+"Sortieren und Suchen sind Sichten auf die Datei und keine Änderungen an ihr, "
+"und ein Menüeintrag schreibt eine Sortierreihenfolge fest, wenn man es "
+"möchte. Was das Raster zeigt, lässt sich als PDF, als Webseite oder als "
 "OpenDocument-Tabelle exportieren."
 
 #: src/grid/cell.rs:529

@@ -39,6 +39,29 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.4" date="2026-08-12">
+      <description>
+        <p>
+          Any column can be held to a condition of its own. Right-click its
+          heading and pick from nine: contains and does not contain, is and is
+          not, is empty and is not empty, is greater than, is less than, and is
+          between. Several columns can each carry one, and they narrow one
+          another.
+        </p>
+        <p>
+          Right-clicking a cell offers the shortest way in — hold this column to
+          the value already written here. Numbers are read as numbers, so a
+          price above 100 turns up neither a blank cell nor one priced in
+          sterling.
+        </p>
+        <p>
+          Every condition in force is spelled out on a bar under the toolbar
+          with the button that removes it, and the title now says how many rows
+          of how many are showing, whether a filter or a search is what left
+          them out.
+        </p>
+      </description>
+    </release>
     <release version="0.1.3" date="2026-08-11">
       <description>
         <p>
