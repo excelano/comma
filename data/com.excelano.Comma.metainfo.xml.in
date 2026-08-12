@@ -39,6 +39,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.6" date="2026-08-12">
+      <description>
+        <p>
+          Fixes a fault that could make Comma stop responding after a cell had
+          been opened for typing. Every version before this one is affected, so
+          this is worth updating to.
+        </p>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-08-12">
       <description>
         <p>

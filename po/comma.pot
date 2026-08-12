@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 13:27-0500\n"
+"POT-Creation-Date: 2026-08-12 16:33-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -59,19 +59,26 @@ msgstr ""
 
 #: data/com.excelano.Comma.metainfo.xml.in:44
 msgid ""
+"Fixes a fault that could make Comma stop responding after a cell had been "
+"opened for typing. Every version before this one is affected, so this is "
+"worth updating to."
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:53
+msgid ""
 "Clicking a row number now moves the keyboard there even in the moment after "
 "a filter or a search has changed what is showing, rather than quietly doing "
 "nothing."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:49
+#: data/com.excelano.Comma.metainfo.xml.in:58
 msgid ""
 "Tabbing through the window goes from the toolbar straight into the table. It "
 "used to stop at the row numbers, which answer to the mouse and had no key to "
 "press."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:58
+#: data/com.excelano.Comma.metainfo.xml.in:67
 msgid ""
 "Any column can be held to a condition of its own. Right-click its heading "
 "and pick from nine: contains and does not contain, is and is not, is empty "
@@ -79,21 +86,21 @@ msgid ""
 "columns can each carry one, and they narrow one another."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:65
+#: data/com.excelano.Comma.metainfo.xml.in:74
 msgid ""
 "Right-clicking a cell offers the shortest way in — hold this column to the "
 "value already written here. Numbers are read as numbers, so a price above "
 "100 turns up neither a blank cell nor one priced in sterling."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:71
+#: data/com.excelano.Comma.metainfo.xml.in:80
 msgid ""
 "Every condition in force is spelled out on a bar under the toolbar with the "
 "button that removes it, and the title now says how many rows of how many are "
 "showing, whether a filter or a search is what left them out."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:81
+#: data/com.excelano.Comma.metainfo.xml.in:90
 msgid ""
 "Wide files draw faster. A file of forty-odd columns took about a second to "
 "put its table on the screen and now takes around half of that, because the "
@@ -101,40 +108,40 @@ msgid ""
 "again for every cell in it."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:87
+#: data/com.excelano.Comma.metainfo.xml.in:96
 msgid ""
 "Building Comma from source now gives you an optimised binary. Asking Meson "
 "for one had quietly been giving you the opposite."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:95
+#: data/com.excelano.Comma.metainfo.xml.in:104
 msgid ""
 "The row numbers stay put when the grid is scrolled sideways, as the column "
 "headings already did, so the number naming a row is beside it however far "
 "across a wide file you have gone."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:100
+#: data/com.excelano.Comma.metainfo.xml.in:109
 msgid ""
 "A row inserted mid-file no longer misnumbers the rows below it, and an edit "
 "made to one of those rows is written to the row you typed into rather than "
 "to the one above it."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:109
+#: data/com.excelano.Comma.metainfo.xml.in:118
 msgid ""
 "Files open quickly. A cell now builds its editor when you type in it rather "
 "than when the grid is drawn, so a file of four thousand rows opens in a "
 "moment rather than in a couple of seconds, and a wide file gains the most."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:115
+#: data/com.excelano.Comma.metainfo.xml.in:124
 msgid ""
 "Inserting or deleting a row redraws that row rather than the whole grid, so "
 "the table stays where you had scrolled it to."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:123
+#: data/com.excelano.Comma.metainfo.xml.in:132
 msgid ""
 "The first release. Comma opens a delimited file, guesses its delimiter and "
 "says which one it guessed, and edits it as a grid. Rows and columns can be "
@@ -142,14 +149,14 @@ msgid ""
 "only the lines you edited."
 msgstr ""
 
-#: data/com.excelano.Comma.metainfo.xml.in:129
+#: data/com.excelano.Comma.metainfo.xml.in:138
 msgid ""
 "Sorting and searching are views of the file rather than changes to it, and "
 "one menu item writes a sort order down when you want it. What the grid is "
 "showing can be exported as a PDF, a web page, or an OpenDocument spreadsheet."
 msgstr ""
 
-#: src/grid/cell.rs:529
+#: src/grid/cell.rs:564
 msgid "Empty"
 msgstr ""
 

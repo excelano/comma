@@ -8,7 +8,7 @@ Comma is a sibling to [Apostrophe](https://gitlab.gnome.org/World/apostrophe). B
 
 ## Status
 
-Released and in daily use, at 0.1.5. Comma opens a file from the command line, the file manager, or its own dialog; guesses the delimiter, shows you which one it guessed, and lets you correct it in one click; and can be told that the first row is column titles rather than data. Cells are editable, rows and columns can be inserted and deleted, everything can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
+Released and in daily use, at 0.1.6. Comma opens a file from the command line, the file manager, or its own dialog; guesses the delimiter, shows you which one it guessed, and lets you correct it in one click; and can be told that the first row is column titles rather than data. Cells are editable, rows and columns can be inserted and deleted, everything can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
 
 Clicking a column header puts the grid in that order without touching the file; one menu item writes that order down when you want it. Searching hides the rows nothing matched in, so what you are looking at before you replace is exactly what you are about to change.
 
