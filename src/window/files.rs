@@ -146,6 +146,8 @@ impl CommaWindow {
         self.set_action_state("header", &false.to_variant());
 
         self.imp().file.replace(Some(file.clone()));
+        self.note_the_file();
+        self.watch_file();
         self.show(document);
         self.show_folder(file);
     }
@@ -164,7 +166,19 @@ impl CommaWindow {
         }
     }
 
+    /// Saves, unless somebody else has written to the file since Comma read
+    /// it, in which case it asks first. Comma writes a file whole, so there is
+    /// no version of this where both sets of changes survive, and the choice is
+    /// the user's to make rather than ours to make quietly.
     fn save_to(&self, file: &gio::File) -> bool {
+        if self.changed_underneath(file) {
+            self.ask_before_overwriting(file);
+            return false;
+        }
+        self.write_to(file)
+    }
+
+    fn write_to(&self, file: &gio::File) -> bool {
         let Some(document) = self.imp().rows.document() else {
             return false;
         };
@@ -183,9 +197,47 @@ impl CommaWindow {
 
         document.borrow_mut().mark_saved();
         self.imp().file.replace(Some(file.clone()));
+        // What is on disk is Comma's own writing now, and it is this that the
+        // next write by anybody else will be told apart from. Save As leaves
+        // the old file behind as well, so what is watched moves with it.
+        self.note_the_file();
+        self.watch_file();
         self.show_folder(file);
         self.show_state();
         true
+    }
+
+    /// Asks before writing over somebody else's work, and offers the way out
+    /// that keeps both: write this one somewhere else.
+    fn ask_before_overwriting(&self, file: &gio::File) {
+        let message = gettext(
+            "“{}” has been written to since Comma read it. Saving replaces what was written there.",
+        )
+        .replace("{}", &display_name(file));
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("This File Has Changed on Disk")),
+            Some(&message),
+        );
+        dialog.add_response("cancel", &gettext("_Cancel"));
+        dialog.add_response("save-as", &gettext("Save _As…"));
+        dialog.add_response("overwrite", &gettext("_Overwrite"));
+        dialog.set_response_appearance("overwrite", adw::ResponseAppearance::Destructive);
+        dialog.set_default_response(Some("cancel"));
+        dialog.set_close_response("cancel");
+
+        let window = self.clone();
+        let file = file.clone();
+        dialog.choose(
+            Some(self),
+            gio::Cancellable::NONE,
+            move |response| match response.as_str() {
+                "overwrite" => {
+                    window.write_to(&file);
+                }
+                "save-as" => window.save_as(),
+                _ => {}
+            },
+        );
     }
 
     pub(super) fn save_as(&self) {

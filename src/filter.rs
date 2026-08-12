@@ -275,6 +275,18 @@ impl Filters {
         }
     }
 
+    /// Drops the conditions on columns a file no longer has, for a file read
+    /// again and come back narrower. Says whether any went.
+    ///
+    /// The ones that remain are left where they are. A column that is still
+    /// there is still the column the condition was asked about, whatever has
+    /// happened to the right of it.
+    pub fn clamp(&mut self, columns: usize) -> bool {
+        let before = self.conditions.len();
+        self.conditions.retain(|(column, _)| *column < columns);
+        self.conditions.len() != before
+    }
+
     fn position(&self, column: usize) -> Result<usize, usize> {
         self.conditions
             .binary_search_by_key(&column, |(column, _)| *column)
@@ -444,5 +456,25 @@ mod tests {
 
         assert_eq!(filters.len(), 1, "the condition on column 1 went with it");
         assert_eq!(filters.on(2), Some(&Condition::IsNotEmpty));
+    }
+
+    #[test]
+    fn a_condition_on_a_column_a_narrower_file_lacks_is_dropped() {
+        let mut filters = Filters::default();
+        filters.set(0, Condition::IsEmpty);
+        filters.set(4, Condition::IsNotEmpty);
+
+        assert!(filters.clamp(3), "the condition on column 4 had to go");
+        assert_eq!(
+            filters.on(0),
+            Some(&Condition::IsEmpty),
+            "column 0 is still there"
+        );
+        assert_eq!(filters.len(), 1);
+
+        assert!(
+            !filters.clamp(3),
+            "nothing left to drop, so nothing changed"
+        );
     }
 }

@@ -4,181 +4,194 @@ using Adw 1;
 template $CommaWindow: Adw.ApplicationWindow {
   title: _("Comma");
 
-  content: Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {
-      title-widget: Adw.WindowTitle window_title {
-        title: _("Comma");
-      };
+  // Outside the toolbar view rather than around the grid inside it. Wrapping
+  // only the grid puts a layer between the table and the window, and on Wayland
+  // a menu popped up over the table then floods the log with widget assertions
+  // — hundreds a frame, until the machine gives out. Around the whole thing it
+  // does not, and this is where GNOME apps put it anyway.
+  content: Adw.ToastOverlay toasts {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        title-widget: Adw.WindowTitle window_title {
+          title: _("Comma");
+        };
 
-      [start]
-      Button open_button {
-        label: _("_Open");
-        use-underline: true;
-        action-name: "win.open";
-        tooltip-text: _("Open a File");
+        [start]
+        Button open_button {
+          label: _("_Open");
+          use-underline: true;
+          action-name: "win.open";
+          tooltip-text: _("Open a File");
+        }
+
+        [start]
+        Button {
+          label: _("_Save");
+          use-underline: true;
+          action-name: "win.save";
+          tooltip-text: _("Save This File");
+        }
+
+        [end]
+        MenuButton menu_button {
+          primary: true;
+          icon-name: "open-menu-symbolic";
+          tooltip-text: _("Main Menu");
+        }
+
+        [end]
+        ToggleButton {
+          icon-name: "system-search-symbolic";
+          tooltip-text: _("Find and Replace");
+          action-name: "win.find";
+        }
+
+        [end]
+        MenuButton dialect_button {
+          visible: false;
+          always-show-arrow: true;
+          tooltip-text: _("How This File Is Read");
+        }
       }
 
-      [start]
-      Button {
-        label: _("_Save");
-        use-underline: true;
-        action-name: "win.save";
-        tooltip-text: _("Save This File");
+      // What the file on disk is doing that the grid is not. Hidden until it is
+      // doing something.
+      [top]
+      Adw.Banner banner {
+        revealed: false;
       }
 
-      [end]
-      MenuButton menu_button {
-        primary: true;
-        icon-name: "open-menu-symbolic";
-        tooltip-text: _("Main Menu");
+      [top]
+      SearchBar search_bar {
+        child: Box {
+          orientation: horizontal;
+          spacing: 6;
+
+          SearchEntry search_entry {
+            placeholder-text: _("Find");
+            hexpand: true;
+            width-chars: 12;
+          }
+
+          Entry replacement {
+            placeholder-text: _("Replace With");
+            hexpand: true;
+            width-chars: 12;
+          }
+
+          Button {
+            label: _("Replace _All");
+            use-underline: true;
+            action-name: "win.replace-all";
+          }
+        };
       }
 
-      [end]
-      ToggleButton {
-        icon-name: "system-search-symbolic";
-        tooltip-text: _("Find and Replace");
-        action-name: "win.find";
-      }
-
-      [end]
-      MenuButton dialect_button {
+      [top]
+      Box filter_bar {
         visible: false;
-        always-show-arrow: true;
-        tooltip-text: _("How This File Is Read");
-      }
-    }
-
-    [top]
-    SearchBar search_bar {
-      child: Box {
         orientation: horizontal;
         spacing: 6;
 
-        SearchEntry search_entry {
-          placeholder-text: _("Find");
-          hexpand: true;
-          width-chars: 12;
-        }
+        styles [
+          "toolbar",
+        ]
 
-        Entry replacement {
-          placeholder-text: _("Replace With");
+        // A file with more filters than fit is a file you can still read them all
+        // of, rather than one that silently shows you some of what is in force.
+        ScrolledWindow {
           hexpand: true;
-          width-chars: 12;
+          vscrollbar-policy: never;
+          propagate-natural-height: true;
+
+          child: Box chips {
+            orientation: horizontal;
+            spacing: 6;
+          };
         }
 
         Button {
-          label: _("Replace _All");
+          label: _("Clear _All");
           use-underline: true;
-          action-name: "win.replace-all";
+          action-name: "win.clear-filters";
+          tooltip-text: _("Show Every Row Again");
+        }
+      }
+
+      content: Stack stack {
+        StackPage {
+          name: "empty";
+
+          child: Adw.StatusPage {
+            icon-name: "com.excelano.Comma-symbolic";
+            title: _("No File Open");
+            description: _("Comma edits CSV, TSV, and other delimited text files.");
+
+            child: Button {
+              label: _("_Open File…");
+              use-underline: true;
+              action-name: "win.open";
+              halign: center;
+
+              styles [
+                "pill",
+                "suggested-action",
+              ]
+            };
+          };
+        }
+
+        StackPage {
+          name: "grid";
+
+          child: Box {
+            orientation: vertical;
+
+            Box {
+              orientation: horizontal;
+              vexpand: true;
+
+              ScrolledWindow gutter_scroller {
+                hscrollbar-policy: external;
+                vscrollbar-policy: external;
+                // A scrolled window asks for nothing of its own, so beside a table
+                // that expands this one would be given no width at all.
+                propagate-natural-width: true;
+
+                child: ColumnView gutter_view {
+                  show-row-separators: true;
+                  reorderable: false;
+                  // The numbers answer to the mouse and to nothing else: a press
+                  // moves the cursor into that row, and the other button asks what
+                  // can be done to it. Tabbing into them would be a stop with no
+                  // key to press, so the keyboard goes straight to the cells.
+                  can-focus: false;
+
+                  styles [
+                    "gutter",
+                  ]
+                };
+              }
+
+              ScrolledWindow table {
+                hexpand: true;
+                hscrollbar-policy: external;
+
+                child: ColumnView column_view {
+                  show-row-separators: true;
+                  show-column-separators: true;
+                  reorderable: false;
+                };
+              }
+            }
+
+            Scrollbar across {
+              orientation: horizontal;
+            }
+          };
         }
       };
-    }
-
-    [top]
-    Box filter_bar {
-      visible: false;
-      orientation: horizontal;
-      spacing: 6;
-
-      styles [
-        "toolbar",
-      ]
-
-      // A file with more filters than fit is a file you can still read them all
-      // of, rather than one that silently shows you some of what is in force.
-      ScrolledWindow {
-        hexpand: true;
-        vscrollbar-policy: never;
-        propagate-natural-height: true;
-
-        child: Box chips {
-          orientation: horizontal;
-          spacing: 6;
-        };
-      }
-
-      Button {
-        label: _("Clear _All");
-        use-underline: true;
-        action-name: "win.clear-filters";
-        tooltip-text: _("Show Every Row Again");
-      }
-    }
-
-    content: Stack stack {
-      StackPage {
-        name: "empty";
-
-        child: Adw.StatusPage {
-          icon-name: "com.excelano.Comma-symbolic";
-          title: _("No File Open");
-          description: _("Comma edits CSV, TSV, and other delimited text files.");
-
-          child: Button {
-            label: _("_Open File…");
-            use-underline: true;
-            action-name: "win.open";
-            halign: center;
-
-            styles [
-              "pill",
-              "suggested-action",
-            ]
-          };
-        };
-      }
-
-      StackPage {
-        name: "grid";
-
-        child: Box {
-          orientation: vertical;
-
-          Box {
-            orientation: horizontal;
-            vexpand: true;
-
-            ScrolledWindow gutter_scroller {
-              hscrollbar-policy: external;
-              vscrollbar-policy: external;
-              // A scrolled window asks for nothing of its own, so beside a table
-              // that expands this one would be given no width at all.
-              propagate-natural-width: true;
-
-              child: ColumnView gutter_view {
-                show-row-separators: true;
-                reorderable: false;
-                // The numbers answer to the mouse and to nothing else: a press
-                // moves the cursor into that row, and the other button asks what
-                // can be done to it. Tabbing into them would be a stop with no
-                // key to press, so the keyboard goes straight to the cells.
-                can-focus: false;
-
-                styles [
-                  "gutter",
-                ]
-              };
-            }
-
-            ScrolledWindow table {
-              hexpand: true;
-              hscrollbar-policy: external;
-
-              child: ColumnView column_view {
-                show-row-separators: true;
-                show-column-separators: true;
-                reorderable: false;
-              };
-            }
-          }
-
-          Scrollbar across {
-            orientation: horizontal;
-          }
-        };
-      }
     };
   };
 }
-

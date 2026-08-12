@@ -178,6 +178,7 @@ pub(super) fn primary_menu() -> gio::Menu {
 
     let file = gio::Menu::new();
     file.append(Some(&gettext("_Open…")), Some("win.open"));
+    file.append(Some(&gettext("_Reload")), Some("win.reload"));
     file.append(Some(&gettext("_Save")), Some("win.save"));
     file.append(Some(&gettext("Save _As…")), Some("win.save-as"));
 

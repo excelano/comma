@@ -9,3 +9,4 @@ src/window.rs
 src/window/files.rs
 src/window/filters.rs
 src/window/menus.rs
+src/window/watch.rs

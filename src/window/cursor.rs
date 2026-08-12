@@ -274,7 +274,7 @@ impl CommaWindow {
     /// around the table are the editor's: Home and End move the caret through
     /// what is being typed, and on a value with a line break in it the arrows
     /// move between its lines, rather than any of them moving to another cell.
-    fn typing(&self) -> bool {
+    pub(super) fn typing(&self) -> bool {
         gtk::prelude::RootExt::focus(self).is_some_and(|widget| widget.is::<gtk::TextView>())
     }
 
@@ -337,6 +337,76 @@ impl CommaWindow {
         self.show_reach();
     }
 
+    /// Puts the cursor back on the row it was on, after the file has been read
+    /// again.
+    ///
+    /// The cursor is kept twice over, and reading the file again can move one
+    /// of them without moving the other. A value somebody else edits can be the
+    /// one the grid is sorted by, and a file that comes back narrower drops the
+    /// filters that were holding columns it no longer has; either way the rows
+    /// keep their numbers and change their order. Held by its place in the
+    /// view, the cursor is left on whichever row moved into that place. So the
+    /// row is what is kept, and the place is looked up again.
+    ///
+    /// This holds a row of the file, which is not the same as holding a record.
+    /// Nothing here can be: a row number is a position too, so a write that
+    /// inserts rows above the cursor renumbers everything below it, and telling
+    /// that apart from a write that edited those rows in place would mean
+    /// matching them by content — a guess, on a file that may well have
+    /// duplicate rows. What the cursor holds across an outside write is the
+    /// line of the file, and that is all it claims to hold.
+    ///
+    /// The view is filtered a few rows at a time, so the row may not have been
+    /// reached yet. Looking again over the next few turns is what the rest of
+    /// this file does about the same thing; a row still missing by then is one
+    /// the filters are holding back, and there is no place in the view to put
+    /// it.
+    pub(super) fn find_cursor_again(&self) {
+        let Some(cursor) = self.imp().current.get() else {
+            return;
+        };
+
+        let left = std::cell::Cell::new(TRIES);
+        glib::idle_add_local(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::ControlFlow::Break,
+            move || {
+                let sorted = window.imp().sorted.clone();
+                let found = (0..sorted.n_items()).find(|at| {
+                    sorted
+                        .item(*at)
+                        .and_downcast::<Row>()
+                        .is_some_and(|row| row.index() == cursor.row)
+                });
+
+                match found {
+                    // Already where it should be, which is the ordinary case:
+                    // most writes do not move the row anybody is sitting on.
+                    Some(position) if position == cursor.position => {
+                        glib::ControlFlow::Break
+                    }
+                    Some(position) => {
+                        window.set_cursor(Cursor { position, ..cursor });
+                        // The keyboard follows only if it is in the table to
+                        // begin with. Reading the file again is not a reason to
+                        // take it out of the search box.
+                        if window.focused_cell().is_some() {
+                            window.go_to(position, cursor.column);
+                        }
+                        glib::ControlFlow::Break
+                    }
+                    None if left.get() == 0 => glib::ControlFlow::Break,
+                    None => {
+                        left.set(left.get() - 1);
+                        glib::ControlFlow::Continue
+                    }
+                }
+            }
+        ));
+    }
+
     /// Puts the cursor somewhere and lights the row it lands on, in the numbers
     /// beside the table as well as in the table.
     fn set_cursor(&self, cursor: Cursor) {
@@ -346,7 +416,7 @@ impl CommaWindow {
     }
 
     /// Opens the cell the keyboard is on for typing.
-    fn edit_cell(&self) {
+    pub(super) fn edit_cell(&self) {
         if let Some(cell) = self.focused_cell() {
             cell.begin();
         }

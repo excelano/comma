@@ -39,6 +39,10 @@ const GROUPS: [(&str, &[(&str, Key)]); 4] = [
             (translatable("Open a File"), Key::Accel("win.open")),
             (translatable("Save"), Key::Accel("win.save")),
             (translatable("Save As"), Key::Accel("win.save-as")),
+            (
+                translatable("Read the File Again"),
+                Key::Accel("win.reload"),
+            ),
             (translatable("Quit"), Key::Accel("app.quit")),
         ],
     ),

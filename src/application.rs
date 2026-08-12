@@ -95,6 +95,7 @@ impl CommaApplication {
         self.set_accels_for_action("app.quit", &["<primary>q"]);
         self.set_accels_for_action("win.open", &["<primary>o"]);
         self.set_accels_for_action("win.save", &["<primary>s"]);
+        self.set_accels_for_action("win.reload", &["<primary>r"]);
         self.set_accels_for_action("win.save-as", &["<primary><shift>s"]);
         self.set_accels_for_action("win.find", &["<primary>f"]);
         // The target has to say what width of number it is, or GIO reads a bare

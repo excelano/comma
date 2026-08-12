@@ -14,6 +14,7 @@ mod files;
 mod filters;
 mod menus;
 mod showing;
+mod watch;
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -35,6 +36,7 @@ use crate::translatable;
 use cursor::Cursor;
 use files::{Format, Task};
 use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu};
+use watch::Adrift;
 
 pub use cursor::key_for;
 
@@ -187,6 +189,12 @@ mod imp {
         pub replacement: TemplateChild<gtk::Entry>,
         /// The bar that says which conditions the columns are being held to,
         /// and the box the chips saying so are put in.
+        /// Where something that has just happened is said, over the grid.
+        #[template_child]
+        pub toasts: TemplateChild<adw::ToastOverlay>,
+        /// Where something the file is doing is said, until it stops.
+        #[template_child]
+        pub banner: TemplateChild<adw::Banner>,
         #[template_child]
         pub filter_bar: TemplateChild<gtk::Box>,
         #[template_child]
@@ -208,6 +216,19 @@ mod imp {
         /// The file the document was read from, and the one Save writes back
         /// to.
         pub file: RefCell<Option<gio::File>>,
+        /// What that file looked like when Comma last read or wrote it. What
+        /// it looks like now is compared against this to tell somebody else's
+        /// write from our own.
+        pub stamp: RefCell<Option<(glib::GString, u64)>>,
+        /// Watches the file for writes made anywhere else. None when there is
+        /// no file, or when the filesystem will not be watched.
+        pub monitor: RefCell<Option<gio::FileMonitor>>,
+        /// Whether a look at the file is already coming. One write arrives as
+        /// several events and is worth one look.
+        pub settling: Cell<bool>,
+        /// What the banner is saying, so that it is not set to what it already
+        /// says.
+        pub adrift: Cell<Option<Adrift>>,
         /// The cell the user last put the keyboard on, as a row and a column of
         /// the document. Rows and columns are added and removed here. It
         /// outlives the focus that set it, so that reaching for a menu does not
@@ -241,6 +262,8 @@ mod imp {
                 search_bar: TemplateChild::default(),
                 search_entry: TemplateChild::default(),
                 replacement: TemplateChild::default(),
+                toasts: TemplateChild::default(),
+                banner: TemplateChild::default(),
                 filter_bar: TemplateChild::default(),
                 chips: TemplateChild::default(),
                 rows: RowModel::default(),
@@ -250,6 +273,10 @@ mod imp {
                 needle: RefCell::default(),
                 filters: RefCell::default(),
                 file: RefCell::default(),
+                stamp: RefCell::default(),
+                monitor: RefCell::default(),
+                settling: Cell::default(),
+                adrift: Cell::default(),
                 current: Cell::default(),
                 previous_sort: Cell::default(),
                 cell_menu: OnceCell::default(),
@@ -311,6 +338,16 @@ mod imp {
 
             self.menu_button.set_menu_model(Some(&primary_menu()));
             self.dialect_button.set_menu_model(Some(&reading_menu()));
+            // The banner offers one thing, and only when there is something to
+            // offer: reading the file again.
+            self.banner.connect_button_clicked(glib::clone!(
+                #[weak]
+                window,
+                move |_| {
+                    ActionGroupExt::activate_action(&window, "reload", None);
+                }
+            ));
+
             window.setup_search();
             window.setup_filters();
             window.setup_navigation();
@@ -443,6 +480,26 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| window.clear_filters())
             .build();
 
+        // Opening the cell the cursor is on, as something that can be asked for
+        // rather than only pressed. The keys that do it are the grid's own and
+        // are bound to the table; this is the same act named, which is what
+        // anything driving Comma from outside has to have.
+        let edit = gio::ActionEntry::builder("edit")
+            .activate(|window: &Self, _, _| window.edit_cell())
+            .build();
+
+        let reload = gio::ActionEntry::builder("reload")
+            .activate(|window: &Self, _, _| {
+                // The same question Open asks, for the same reason: reading the
+                // file again is how edits that were never saved stop existing.
+                window.confirm_discard(|window| {
+                    if window.read_the_file_again().is_some() {
+                        window.show_adrift(None);
+                    }
+                })
+            })
+            .build();
+
         let move_cursor = gio::ActionEntry::builder("move-cursor")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(|window: &Self, _, param| {
@@ -523,6 +580,8 @@ impl CommaWindow {
             open,
             save,
             save_as,
+            reload,
+            edit,
             undo,
             redo,
             find,
@@ -569,6 +628,7 @@ impl CommaWindow {
         for name in [
             "save",
             "save-as",
+            "reload",
             "undo",
             "redo",
             "commit-order",
@@ -576,6 +636,7 @@ impl CommaWindow {
             "filter-column",
             "filter-to-value",
             "clear-filter",
+            "edit",
             "clear-filters",
         ] {
             self.set_action_enabled(name, false);
@@ -653,6 +714,81 @@ impl CommaWindow {
 
         imp.dialect_button.set_visible(true);
         imp.stack.set_visible_child_name("grid");
+    }
+
+    /// Puts the same file, read again, in front of the user — keeping what
+    /// they had asked to see of it.
+    ///
+    /// The difference from `show` is what is kept rather than what is done. A
+    /// different file arrives knowing nothing about the last one, but this is
+    /// the file already on screen and the conditions, the sorting and the place
+    /// the keyboard is were asked for about *these* columns. Throwing them away
+    /// on every write would make watching a file somebody else is editing
+    /// useless, which is what this is for.
+    /// Says whether it had anything to tell the user, so that a reload which
+    /// has already spoken for itself is not announced twice.
+    fn show_again(&self, document: Document) -> bool {
+        let imp = self.imp();
+
+        // Unless the file came back narrower, in which case some of them are
+        // about columns that are not there any more.
+        let dropped = imp.filters.borrow_mut().clamp(document.column_count());
+        if dropped {
+            self.say(&gettext(
+                "Reloaded. Some filters were on columns the file no longer has.",
+            ));
+        }
+        self.hold_cursor(&document);
+
+        // Where along the file the user is looking. The columns are built again
+        // below, and a view rebuilt while the keyboard is inside it scrolls to
+        // wherever the keyboard is — which on a wide file means somebody else's
+        // write moving what you were reading.
+        let across = imp.table.hadjustment().value();
+
+        imp.rows.set_document(document);
+        self.rebuild_columns();
+        self.show_filters();
+        self.show_dialect();
+        self.show_state();
+        self.find_cursor_again();
+
+        // Once the columns have been measured. Before that the view is as wide
+        // as it is going to be told to be, and putting the number back means
+        // nothing.
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move || window.imp().table.hadjustment().set_value(across)
+        ));
+
+        dropped
+    }
+
+    /// Keeps the cursor on the record it was on across a file being read
+    /// again, as far as the file still goes. A shorter file takes the last row
+    /// with it.
+    ///
+    /// The row is what is held; where that row now sits in the view is looked
+    /// up afterwards by `find_cursor_again`, once there is a view to look it up
+    /// in. A row of the file rather than a record of it — see there for why
+    /// that is as far as this goes.
+    fn hold_cursor(&self, document: &Document) {
+        let imp = self.imp();
+        let (rows, columns) = (document.row_count(), document.column_count());
+        let Some(cursor) = imp.current.get().filter(|_| rows > 0 && columns > 0) else {
+            imp.current.set(None);
+            return;
+        };
+
+        // The position is where the row sits in the view, and the view is
+        // rebuilt after this rather than before it. Going to a position that
+        // has gone is already declined, so it is left as it is.
+        imp.current.set(Some(Cursor {
+            row: cursor.row.min(rows - 1),
+            column: cursor.column.min(columns - 1),
+            ..cursor
+        }));
     }
 
     /// Ties the row numbers to the table: one vertical adjustment moves both,
@@ -917,6 +1053,9 @@ impl CommaWindow {
         self.set_action_enabled("save", modified);
         let open = self.imp().rows.document().is_some();
         self.set_action_enabled("save-as", open);
+        // Reading it again needs a file to read, which a document typed into a
+        // window that never opened one does not have.
+        self.set_action_enabled("reload", self.imp().file.borrow().is_some());
         for format in Format::ALL {
             self.set_action_enabled(format.action(), open);
         }
@@ -945,8 +1084,9 @@ impl CommaWindow {
     fn show_reach(&self) {
         let cell = self.current_cell().is_some();
         // Holding a column to the value in front of you needs a value in front
-        // of you.
+        // of you, and so does opening one to type in.
         self.set_action_enabled("filter-to-value", cell);
+        self.set_action_enabled("edit", cell);
         let document = self.imp().rows.document().is_some();
         let file_order = self.showing_file_order();
         for operation in STRUCTURE {
