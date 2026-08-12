@@ -384,9 +384,7 @@ impl CommaWindow {
                 match found {
                     // Already where it should be, which is the ordinary case:
                     // most writes do not move the row anybody is sitting on.
-                    Some(position) if position == cursor.position => {
-                        glib::ControlFlow::Break
-                    }
+                    Some(position) if position == cursor.position => glib::ControlFlow::Break,
                     Some(position) => {
                         window.set_cursor(Cursor { position, ..cursor });
                         // The keyboard follows only if it is in the table to
