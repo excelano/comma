@@ -39,6 +39,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.5" date="2026-08-12">
+      <description>
+        <p>
+          Clicking a row number now moves the keyboard there even in the moment
+          after a filter or a search has changed what is showing, rather than
+          quietly doing nothing.
+        </p>
+        <p>
+          Tabbing through the window goes from the toolbar straight into the
+          table. It used to stop at the row numbers, which answer to the mouse
+          and had no key to press.
+        </p>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-08-12">
       <description>
         <p>
