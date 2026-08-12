@@ -144,7 +144,21 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for Cell {}
+    impl WidgetImpl for Cell {
+        /// A new font, or a new scale to draw it at, means the height a line
+        /// takes has changed, and every row in the grid is sized by it.
+        fn system_setting_changed(&self, setting: &gtk::SystemSetting) {
+            if matches!(
+                setting,
+                gtk::SystemSetting::Dpi
+                    | gtk::SystemSetting::FontName
+                    | gtk::SystemSetting::FontConfig
+            ) {
+                super::super::forget_line_height();
+            }
+            self.parent_system_setting_changed(setting);
+        }
+    }
 }
 
 glib::wrapper! {

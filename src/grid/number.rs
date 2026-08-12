@@ -57,7 +57,21 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for Number {}
+    impl WidgetImpl for Number {
+        /// As for a cell: the number beside a row is sized the same way, and
+        /// has to stop believing the old measurement at the same moment.
+        fn system_setting_changed(&self, setting: &gtk::SystemSetting) {
+            if matches!(
+                setting,
+                gtk::SystemSetting::Dpi
+                    | gtk::SystemSetting::FontName
+                    | gtk::SystemSetting::FontConfig
+            ) {
+                super::super::forget_line_height();
+            }
+            self.parent_system_setting_changed(setting);
+        }
+    }
 }
 
 glib::wrapper! {

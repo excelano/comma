@@ -174,9 +174,32 @@ pub(crate) fn visit<T: IsA<gtk::Widget>>(
 /// value in the row, so a row and the number naming it come out the same height
 /// by construction rather than by luck. They are in two views now, and nothing
 /// else lines them up.
+///
+/// One line is measured once and the answer kept, because laying text out is the
+/// most expensive thing a cell does on its way to being drawn, and a wide file
+/// asks for thousands of cells before it shows anything. The same height serves
+/// both views because both labels are set in the font the grid inherits, and
+/// neither view's styling touches it.
 pub(crate) fn height_for_lines(widget: &impl IsA<gtk::Widget>, lines: usize) -> i32 {
-    let (_, line) = widget.create_pango_layout(Some("X")).pixel_size();
-    line * lines as i32
+    LINE_HEIGHT.with(|known| {
+        let mut height = known.get();
+        if height == 0 {
+            height = widget.create_pango_layout(Some("X")).pixel_size().1;
+            known.set(height);
+        }
+        height * lines as i32
+    })
+}
+
+thread_local! {
+    static LINE_HEIGHT: std::cell::Cell<i32> = const { std::cell::Cell::new(0) };
+}
+
+/// Says that the measurement is stale, because the font the grid is set in has
+/// changed. Every widget that shows text is told when that happens; the first
+/// one to ask afterwards measures again for all of them.
+pub(crate) fn forget_line_height() {
+    LINE_HEIGHT.with(|known| known.set(0));
 }
 
 fn remove_all_columns(column_view: &gtk::ColumnView) {
