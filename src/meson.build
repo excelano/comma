@@ -43,7 +43,14 @@ run_command(
 cargo_build_script = find_program(
   meson.project_source_root() / 'build-aux' / 'cargo-build.sh',
 )
-cargo_profile = get_option('buildtype').startswith('debug') ? 'debug' : 'release'
+# Meson names three kinds of build and Cargo names two, so the middle one is
+# spelled out in Cargo.toml rather than rounded to either side. Rounding it down
+# is what this did before, and it cost a second to draw a wide file in the build
+# most people run from source.
+cargo_profile = {
+  'debug': 'debug',
+  'debugoptimized': 'debugoptimized',
+}.get(get_option('buildtype'), 'release')
 
 cargo_build = custom_target(
   'cargo-build',

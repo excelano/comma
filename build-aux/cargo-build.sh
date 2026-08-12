@@ -17,7 +17,7 @@
 set -euo pipefail
 
 manifest=$1
-profile=$2  # debug | release
+profile=$2  # debug | debugoptimized | release
 output=$3
 
 target_dir=$(
@@ -30,10 +30,14 @@ if [ -z "$target_dir" ]; then
     exit 1
 fi
 
+# Cargo's two built-in profiles are asked for by flag and any other by name.
+# All three put the binary in a directory named after the profile.
 args=(build --manifest-path "$manifest")
-if [ "$profile" = release ]; then
-    args+=(--release)
-fi
+case "$profile" in
+    debug) ;;
+    release) args+=(--release) ;;
+    *) args+=(--profile "$profile") ;;
+esac
 
 cargo "${args[@]}"
 cp "$target_dir/$profile/comma" "$output"

@@ -25,5 +25,13 @@ xaddr = "0.2"
 [profile.release]
 lto = "thin"
 
+# What Meson's debugoptimized builds: release code, keeping enough of the debug
+# information for a panic to name the line it came from. This is the profile to
+# install from source, because an unoptimized Comma spends about a second
+# building the cells of a wide file before it can draw it.
+[profile.debugoptimized]
+inherits = "release"
+debug = "line-tables-only"
+
 [dev-dependencies]
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }

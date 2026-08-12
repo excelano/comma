@@ -50,9 +50,11 @@ The Rust toolchain has to come from [rustup](https://rustup.rs) rather than from
 Then configure, build, and install into your home prefix:
 
 ```sh
-meson setup builddir --prefix="$HOME/.local"
+meson setup builddir --prefix="$HOME/.local" --buildtype=debugoptimized
 ninja -C builddir install
 ```
+
+Ask for `debugoptimized` rather than taking Meson's default, which is an unoptimized build. Comma spends the time between launching and drawing a file building a cell widget for every column of every row it has realised, and unoptimized that costs a wide file roughly a further fifth of a second. `debugoptimized` keeps enough debug information for a panic to name the line it came from. The Debian package is built as `release`, so this only affects installing from source.
 
 Run it with `~/.local/bin/comma`. Installing is not optional — Comma loads its compiled resource bundle and its GSettings schema from the install prefix, so running the binary straight out of the build directory will not work. If you have also installed the package, note that `~/.local/bin` usually comes first on `PATH`, so this build is the one that runs.
 
