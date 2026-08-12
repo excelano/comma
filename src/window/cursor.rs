@@ -266,20 +266,33 @@ impl CommaWindow {
             return;
         };
 
-        // The cursor moves whether or not the keyboard can follow it there yet,
-        // so that moving twice in a row lands where two moves should.
-        if let Some(row) = imp
+        // The same question asked of the other axis, and it has to be asked:
+        // scrolling to a row the view does not have is an assertion inside GTK,
+        // which drops the scroll and complains. Two ways to arrive at one. A
+        // position can be past the end of the file, because this is reached
+        // through an action and an action takes what it is given. And it can be
+        // a position the view has not caught up to: the filtered model is built
+        // over several frames, so a row number clicked moments after a filter
+        // or a search changed can name a row that is on its way.
+        //
+        // Declining is the right answer to both. Landing somewhere else instead
+        // would mean a click on row 500 putting the keyboard on row 7.
+        let Some(row) = imp
             .sorted
             .item(position)
             .and_downcast::<Row>()
             .map(|row| row.index())
-        {
-            self.set_cursor(Cursor {
-                position,
-                row,
-                column,
-            });
-        }
+        else {
+            return;
+        };
+
+        // The cursor moves whether or not the keyboard can follow it there yet,
+        // so that moving twice in a row lands where two moves should.
+        self.set_cursor(Cursor {
+            position,
+            row,
+            column,
+        });
 
         imp.column_view
             .scroll_to(position, Some(&target), gtk::ListScrollFlags::empty(), None);
