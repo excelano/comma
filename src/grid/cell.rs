@@ -92,6 +92,10 @@ mod imp {
     #[derive(Default)]
     pub struct Cell {
         pub label: gtk::Label,
+        /// Whether the edit is already on its way out, so that the focus
+        /// leaving the entry — which is how an edit ordinarily ends — is not
+        /// taken as a second ending while the first is still happening.
+        pub closing: Value<bool>,
         /// Made the first time this cell is opened, and kept afterwards: a cell
         /// that has been edited once is likely to be edited again, and the
         /// saving is in the thousands that never are.
@@ -276,11 +280,25 @@ impl Cell {
             move |_| cell.fit_to_lines()
         ));
 
+        // Losing the focus ends the edit, but not this instant. GTK is part way
+        // through moving the focus when it says so, and ending the edit takes
+        // the editor out of the window: the move is left holding a widget that
+        // no longer has a parent, and asks it for one as soon as the focus goes
+        // anywhere else. It finds nothing, says so, tries the next place the
+        // focus could go, and finds nothing there either — a critical apiece,
+        // for as long as the window is open. Waiting a turn of the loop lets
+        // the move finish first, and there is nothing to see in between.
         let leaving = gtk::EventControllerFocus::new();
         leaving.connect_leave(glib::clone!(
             #[weak(rename_to = cell)]
             self,
-            move |_| cell.finish(false)
+            move |_| {
+                glib::idle_add_local_once(glib::clone!(
+                    #[weak]
+                    cell,
+                    move || cell.finish(false)
+                ));
+            }
         ));
         editor.entry.add_controller(leaving);
 
@@ -330,6 +348,23 @@ impl Cell {
         // widget is a thing other code watches for.
         let editor = self.imp().editor.borrow().clone();
         if let Some(editor) = editor {
+            // The keyboard comes out of the editor before the editor comes out
+            // of the window, and this order is not a nicety. A window keeps a
+            // note of which widget has the focus, and finds its way from there
+            // to the root by asking each widget for its parent. A widget
+            // unparented while that note still points at it leaves the walk
+            // with nowhere to go: the next focus change asks a widget with no
+            // parent for its parent, and GTK says so. Then the focus hunt tries
+            // the next cell and asks again, and again, for as long as the window
+            // is open — which is a critical per attempt and a window that stops
+            // answering.
+            if editor.entry.has_focus() {
+                // Losing focus is one of the two ways an edit ends, and this is
+                // the one time it means nothing: this edit is already ending.
+                self.imp().closing.set(true);
+                self.grab_focus();
+                self.imp().closing.set(false);
+            }
             editor.scroller.unparent();
         }
         self.imp().label.set_parent(self);
@@ -379,7 +414,7 @@ impl Cell {
     }
 
     fn finish(&self, moving_on: bool) {
-        if !self.editing() {
+        if self.imp().closing.get() || !self.editing() {
             // The edit has already ended. Committing on Enter takes the focus
             // away from the entry, and losing focus is the other way one ends.
             return;
