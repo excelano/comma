@@ -39,6 +39,26 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.8" date="2026-08-13">
+      <description>
+        <p>
+          Comma can now hand the file, or the folder it sits in, to something
+          else. The primary menu opens the containing folder, or a terminal
+          already standing in it, so there is no path to retype.
+        </p>
+        <p>
+          It can also open the file in xled, xql or nved, each offered only
+          when it is installed. Comma tells them what it has already worked out
+          about the file — which delimiter it is reading and whether the first
+          row is a header — so the tool comes up on the same view of the file
+          rather than working it out again.
+        </p>
+        <p>
+          A file with unsaved edits offers to save before it is handed over,
+          since the tool reads what is on disk.
+        </p>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-08-12">
       <description>
         <p>
