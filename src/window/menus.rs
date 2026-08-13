@@ -17,10 +17,12 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, pgettext};
 use gtk::gdk;
 use gtk::gio;
+use gtk::glib;
 
 use comma::document::Dialect;
 
 use super::files::Format;
+use super::place::{self, Tool};
 use super::{AT_CURSOR, Axis, CommaWindow, STRUCTURE};
 
 /// The delimiters Comma offers, in the order the menu lists them. Everything
@@ -194,8 +196,46 @@ pub(super) fn primary_menu() -> gio::Menu {
     menu.append_section(None, &view);
     menu.append_section(None, &export);
     menu.append_section(None, &file);
+    menu.append_section(None, &places());
+    if let Some(tools) = tools() {
+        menu.append_section(None, &tools);
+    }
     menu.append_section(None, &about);
     menu
+}
+
+/// The ways out of the window that are about where the file is rather than
+/// about the file: the folder it is in, and a shell standing in that folder.
+fn places() -> gio::Menu {
+    let menu = gio::Menu::new();
+    menu.append(
+        Some(&gettext("Open Containing _Folder")),
+        Some("win.open-containing-folder"),
+    );
+    if place::terminals_reachable() {
+        menu.append(
+            Some(&gettext("Open in _Terminal")),
+            Some("win.open-terminal"),
+        );
+    }
+    menu
+}
+
+/// The tools that are here to be opened in, and only those.
+///
+/// Looked for once, when the window is built, because what is installed does
+/// not change while it is open. A tool that is not there is not named at all:
+/// an item greyed out for a tool the user has never heard of would be Comma
+/// advertising rather than offering.
+fn tools() -> Option<gio::Menu> {
+    let menu = gio::Menu::new();
+    for tool in Tool::ALL {
+        if glib::find_program_in_path(tool.program()).is_some() {
+            menu.append(Some(&tool.label()), Some(&format!("win.{}", tool.action())));
+        }
+    }
+
+    (menu.n_items() > 0).then_some(menu)
 }
 
 /// How the file is being read: which delimiter, and whether its first record is

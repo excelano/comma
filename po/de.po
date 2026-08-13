@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 17:56-0500\n"
+"POT-Creation-Date: 2026-08-13 17:07-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -256,7 +256,8 @@ msgstr "Ö_ffnen"
 msgid "Open a File"
 msgstr "Eine Datei öffnen"
 
-#: src/gtk/window.blp:30 src/window/files.rs:291 src/window/menus.rs:182
+#: src/gtk/window.blp:30 src/window/files.rs:291 src/window/menus.rs:184
+#: src/window/place.rs:176
 msgid "_Save"
 msgstr "_Speichern"
 
@@ -400,37 +401,37 @@ msgstr "Ende der Datei"
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: src/window.rs:89
+#: src/window.rs:92
 msgid "Insert Row Above"
 msgstr "Zeile darüber einfügen"
 
-#: src/window.rs:97
+#: src/window.rs:100
 msgid "Insert Row Below"
 msgstr "Zeile darunter einfügen"
 
-#: src/window.rs:107
+#: src/window.rs:110
 msgid "Delete Row"
 msgstr "Zeile löschen"
 
-#: src/window.rs:115
+#: src/window.rs:118
 msgid "Insert Column Before"
 msgstr "Spalte davor einfügen"
 
-#: src/window.rs:123
+#: src/window.rs:126
 msgid "Insert Column After"
 msgstr "Spalte danach einfügen"
 
-#: src/window.rs:131
+#: src/window.rs:134
 msgid "Delete Column"
 msgstr "Spalte löschen"
 
-#: src/window.rs:738
+#: src/window.rs:763
 msgid "Reloaded. Some filters were on columns the file no longer has."
 msgstr ""
 "Neu eingelesen. Einige Filter galten für Spalten, die die Datei nicht mehr "
 "hat."
 
-#: src/window.rs:1118
+#: src/window.rs:1168
 msgid "_Close"
 msgstr "S_chließen"
 
@@ -487,10 +488,11 @@ msgid "This File Has Changed on Disk"
 msgstr "Diese Datei hat sich auf dem Datenträger geändert"
 
 #: src/window/files.rs:221 src/window/files.rs:289 src/window/filters.rs:241
+#: src/window/place.rs:174
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
-#: src/window/files.rs:222 src/window/menus.rs:183
+#: src/window/files.rs:222 src/window/menus.rs:185
 msgid "Save _As…"
 msgstr "Speichern _unter …"
 
@@ -655,82 +657,123 @@ msgstr "%c ist kleiner als %v"
 msgid "%c is between %v and %w"
 msgstr "%c liegt zwischen %v und %w"
 
-#: src/window/menus.rs:117
+#: src/window/menus.rs:119
 msgid "Show Only Rows Like This One"
 msgstr "Nur Zeilen wie diese anzeigen"
 
-#: src/window/menus.rs:147
+#: src/window/menus.rs:149
 msgid "_Filter This Column…"
 msgstr "Diese _Spalte filtern …"
 
-#: src/window/menus.rs:156
+#: src/window/menus.rs:158
 msgid "_Undo"
 msgstr "_Rückgängig"
 
-#: src/window/menus.rs:157
+#: src/window/menus.rs:159
 msgid "_Redo"
 msgstr "_Wiederholen"
 
-#: src/window/menus.rs:161
+#: src/window/menus.rs:163
 msgid "Apply This Order to the File"
 msgstr "Diese Reihenfolge auf die Datei anwenden"
 
-#: src/window/menus.rs:165
+#: src/window/menus.rs:167
 msgid "Clear All Filters"
 msgstr "Alle Filter entfernen"
 
-#: src/window/menus.rs:177
+#: src/window/menus.rs:179
 msgid "_Export"
 msgstr "_Exportieren"
 
-#: src/window/menus.rs:180
+#: src/window/menus.rs:182
 msgid "_Open…"
 msgstr "Ö_ffnen …"
 
-#: src/window/menus.rs:181 src/window/watch.rs:60
+#: src/window/menus.rs:183 src/window/watch.rs:60
 msgid "_Reload"
 msgstr "Neu _einlesen"
 
-#: src/window/menus.rs:186
+#: src/window/menus.rs:188
 msgid "_Keyboard Shortcuts"
 msgstr "_Tastenkürzel"
 
-#: src/window/menus.rs:187
+#: src/window/menus.rs:189
 msgid "_About Comma"
 msgstr "_Info zu Comma"
 
 #: src/window/menus.rs:212
+msgid "Open Containing _Folder"
+msgstr "Enthaltenden _Ordner öffnen"
+
+#: src/window/menus.rs:217
+msgid "Open in _Terminal"
+msgstr "Im _Terminal öffnen"
+
+#: src/window/menus.rs:252
 msgid "First Row Is a Header"
 msgstr "Erste Zeile ist eine Kopfzeile"
 
-#: src/window/menus.rs:215
+#: src/window/menus.rs:255
 msgid "Delimiter"
 msgstr "Trennzeichen"
 
-#: src/window/menus.rs:243
+#: src/window/menus.rs:283
 msgctxt "delimiter"
 msgid "Comma"
 msgstr "Komma"
 
-#: src/window/menus.rs:244
+#: src/window/menus.rs:284
 msgctxt "delimiter"
 msgid "Tab"
 msgstr "Tabulator"
 
-#: src/window/menus.rs:245
+#: src/window/menus.rs:285
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr "Semikolon"
 
-#: src/window/menus.rs:246
+#: src/window/menus.rs:286
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr "Senkrechter Strich"
 
-#: src/window/menus.rs:247
+#: src/window/menus.rs:287
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr "ASCII-Trennzeichen"
+
+#: src/window/place.rs:113
+msgid "Open with {}"
+msgstr "Mit {} öffnen"
+
+#: src/window/place.rs:145
+msgid "Could not open the folder."
+msgstr "Der Ordner konnte nicht geöffnet werden."
+
+#. Two things to fill in, so each says which it is. A sentence is
+#. translated whole and another language may want them the other way
+#. round, which two of the same mark could not survive.
+#: src/window/place.rs:170
+msgid "“{file}” has unsaved changes. {tool} reads the file from disk."
+msgstr ""
+"„{file}“ enthält ungespeicherte Änderungen. {tool} liest die Datei vom "
+"Datenträger."
+
+#: src/window/place.rs:173
+msgid "Save Before Opening?"
+msgstr "Vor dem Öffnen speichern?"
+
+#: src/window/place.rs:175
+msgid "Open _Anyway"
+msgstr "Trotzdem _öffnen"
+
+#: src/window/place.rs:220
+msgid "No terminal application was found."
+msgstr "Es wurde keine Terminal-Anwendung gefunden."
+
+#: src/window/place.rs:230
+msgid "Could not open a terminal."
+msgstr "Es konnte kein Terminal geöffnet werden."
 
 #: src/window/watch.rs:51
 msgid "This file has changed on disk."

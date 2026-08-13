@@ -4,7 +4,8 @@
 // actions everything else is reached through, and what the window says about
 // the document. The rest is next door: `cursor` for where the keyboard is,
 // `files` for where the document comes from and goes, `showing` for which rows
-// the grid is showing and in what order, and `menus` for the menus.
+// the grid is showing and in what order, `menus` for the menus, and `place` for
+// handing the file to something outside the window.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
@@ -13,6 +14,7 @@ mod cursor;
 mod files;
 mod filters;
 mod menus;
+mod place;
 mod showing;
 mod watch;
 
@@ -36,6 +38,7 @@ use crate::translatable;
 use cursor::Cursor;
 use files::{Format, Task};
 use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu};
+use place::Tool;
 use watch::Adrift;
 
 pub use cursor::key_for;
@@ -542,6 +545,14 @@ impl CommaWindow {
             })
             .build();
 
+        let open_containing_folder = gio::ActionEntry::builder("open-containing-folder")
+            .activate(|window: &Self, _, _| window.open_containing_folder())
+            .build();
+
+        let open_terminal = gio::ActionEntry::builder("open-terminal")
+            .activate(|window: &Self, _, _| window.open_terminal())
+            .build();
+
         let keyboard = gio::ActionEntry::builder("shortcuts")
             .activate(|window: &Self, _, _| shortcuts::present(window))
             .build();
@@ -594,6 +605,8 @@ impl CommaWindow {
             go_to,
             cell_menu,
             row_menu,
+            open_containing_folder,
+            open_terminal,
             keyboard,
             commit_order,
             delimiter,
@@ -603,6 +616,13 @@ impl CommaWindow {
             entries.push(
                 gio::ActionEntry::builder(format.action())
                     .activate(move |window: &Self, _, _| window.export(format))
+                    .build(),
+            );
+        }
+        for tool in Tool::ALL {
+            entries.push(
+                gio::ActionEntry::builder(tool.action())
+                    .activate(move |window: &Self, _, _| window.open_with(tool))
                     .build(),
             );
         }
@@ -638,8 +658,13 @@ impl CommaWindow {
             "clear-filter",
             "edit",
             "clear-filters",
+            "open-containing-folder",
+            "open-terminal",
         ] {
             self.set_action_enabled(name, false);
+        }
+        for tool in Tool::ALL {
+            self.set_action_enabled(tool.action(), false);
         }
     }
 
@@ -1072,9 +1097,34 @@ impl CommaWindow {
         for name in ["filter-column", "clear-filter"] {
             self.set_action_enabled(name, open);
         }
+        self.show_the_way_out();
         self.set_action_enabled("clear-filters", !self.imp().filters.borrow().is_empty());
 
         self.show_reach();
+    }
+
+    /// Which of the ways out of the window have somewhere to go.
+    ///
+    /// Each asks for what it actually needs rather than for a file in general.
+    /// Showing the folder goes through the portal and works wherever the file
+    /// came from; a shell has to stand somewhere on this computer; and a tool
+    /// has to be able to read the file it is handed, which is not true of every
+    /// tool for every way of writing one.
+    fn show_the_way_out(&self) {
+        let file = self.imp().file.borrow().clone();
+        self.set_action_enabled("open-containing-folder", file.is_some());
+        self.set_action_enabled("open-terminal", self.folder_path().is_some());
+
+        let readable = file.as_ref().and_then(gio::File::path).is_some();
+        let dialect = self
+            .imp()
+            .rows
+            .document()
+            .map(|document| document.borrow().dialect());
+        for tool in Tool::ALL {
+            let reads = dialect.is_some_and(|dialect| tool.reads(dialect));
+            self.set_action_enabled(tool.action(), readable && reads);
+        }
     }
 
     /// Which row and column operations have somewhere to happen.
