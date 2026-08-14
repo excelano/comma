@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-14 12:58-0500\n"
+"POT-Creation-Date: 2026-08-14 14:28-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -299,6 +299,23 @@ msgstr ""
 "und ein Menüeintrag schreibt eine Sortierreihenfolge fest, wenn man es "
 "möchte. Was das Raster zeigt, lässt sich als PDF, als Webseite oder als "
 "OpenDocument-Tabelle exportieren."
+
+#: src/application.rs:147
+msgid "Show the version and exit"
+msgstr "Die Version anzeigen und beenden"
+
+#. Plural, because a file per window is what open() does with them.
+#: src/application.rs:152
+msgid "[FILE…]"
+msgstr "[DATEI …]"
+
+#: src/application.rs:154
+msgid ""
+"Edit CSV, TSV and other delimited text files as a grid.\n"
+"Each file named opens in a window of its own."
+msgstr ""
+"CSV-, TSV- und andere Textdateien mit Trennzeichen als Raster bearbeiten.\n"
+"Jede angegebene Datei wird in einem eigenen Fenster geöffnet."
 
 #: src/grid/cell.rs:564
 msgid "Empty"

@@ -3,8 +3,11 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
+use std::ops::ControlFlow;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
 use gtk::gdk;
 use gtk::gio;
 use gtk::glib;
@@ -29,10 +32,23 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             self.obj().setup_actions();
+            self.obj().setup_options();
         }
     }
 
     impl ApplicationImpl for CommaApplication {
+        /// The one question that is about Comma rather than about a file, so
+        /// it is answered here, before anything registers or a window is
+        /// built. Breaking out of the run is what makes `comma --version`
+        /// print a line and end rather than open an empty grid.
+        fn handle_local_options(&self, options: &glib::VariantDict) -> ControlFlow<glib::ExitCode> {
+            if options.contains("version") {
+                println!("Comma {VERSION}");
+                return ControlFlow::Break(glib::ExitCode::SUCCESS);
+            }
+            self.parent_handle_local_options(options)
+        }
+
         fn startup(&self) {
             self.parent_startup();
             self.obj().load_styles();
@@ -115,6 +131,28 @@ impl CommaApplication {
         );
         self.set_accels_for_action("win.undo", &["<primary>z"]);
         self.set_accels_for_action("win.redo", &["<primary><shift>z", "<primary>y"]);
+    }
+
+    /// What `--help` and `--version` answer.
+    ///
+    /// GApplication writes the help itself and does it well, but only about the
+    /// options. The two lines it cannot know are the ones a person runs
+    /// `--help` to read: that Comma takes files, and what it does with them.
+    fn setup_options(&self) {
+        self.add_main_option(
+            "version",
+            glib::Char::from(b'V'),
+            glib::OptionFlags::NONE,
+            glib::OptionArg::None,
+            &gettext("Show the version and exit"),
+            None,
+        );
+
+        // Plural, because a file per window is what open() does with them.
+        self.set_option_context_parameter_string(Some(&gettext("[FILE…]")));
+        self.set_option_context_summary(Some(&gettext(
+            "Edit CSV, TSV and other delimited text files as a grid.\nEach file named opens in a window of its own.",
+        )));
     }
 
     /// Comma's own styling, on top of whatever theme the desktop is wearing.

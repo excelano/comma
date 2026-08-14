@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-14 12:58-0500\n"
+"POT-Creation-Date: 2026-08-14 14:28-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -211,6 +211,21 @@ msgid ""
 "Sorting and searching are views of the file rather than changes to it, and "
 "one menu item writes a sort order down when you want it. What the grid is "
 "showing can be exported as a PDF, a web page, or an OpenDocument spreadsheet."
+msgstr ""
+
+#: src/application.rs:147
+msgid "Show the version and exit"
+msgstr ""
+
+#. Plural, because a file per window is what open() does with them.
+#: src/application.rs:152
+msgid "[FILE…]"
+msgstr ""
+
+#: src/application.rs:154
+msgid ""
+"Edit CSV, TSV and other delimited text files as a grid.\n"
+"Each file named opens in a window of its own."
 msgstr ""
 
 #: src/grid/cell.rs:564
