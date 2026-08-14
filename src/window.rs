@@ -37,7 +37,7 @@ use crate::translatable;
 
 use cursor::Cursor;
 use files::{Format, Task};
-use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu};
+use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu, save_menu};
 use place::Tool;
 use watch::Adrift;
 
@@ -181,6 +181,8 @@ mod imp {
         #[template_child]
         pub open_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub save_button: TemplateChild<adw::SplitButton>,
+        #[template_child]
         pub menu_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub dialect_button: TemplateChild<gtk::MenuButton>,
@@ -265,6 +267,7 @@ mod imp {
                 gutter_view: TemplateChild::default(),
                 across: TemplateChild::default(),
                 open_button: TemplateChild::default(),
+                save_button: TemplateChild::default(),
                 menu_button: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
                 search_bar: TemplateChild::default(),
@@ -346,6 +349,7 @@ mod imp {
             }
 
             self.menu_button.set_menu_model(Some(&primary_menu()));
+            self.save_button.set_menu_model(Some(&save_menu()));
             self.dialect_button.set_menu_model(Some(&reading_menu()));
             // The banner offers one thing, and only when there is something to
             // offer: reading the file again.
@@ -672,6 +676,9 @@ impl CommaWindow {
             "open-terminal",
         ] {
             self.set_action_enabled(name, false);
+        }
+        for format in Format::ALL {
+            self.set_action_enabled(format.action(), false);
         }
         for tool in Tool::ALL {
             self.set_action_enabled(tool.action(), false);

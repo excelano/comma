@@ -168,21 +168,12 @@ pub(super) fn primary_menu() -> gio::Menu {
         Some("win.clear-filters"),
     );
 
-    let exports = gio::Menu::new();
-    for format in Format::ALL {
-        exports.append(
-            Some(&gettext(format.label())),
-            Some(&format!("win.{}", format.action())),
-        );
-    }
-    let export = gio::Menu::new();
-    export.append_submenu(Some(&gettext("_Export")), &exports);
-
+    // The three that act on the document this window holds. Writing it out as
+    // something else is under the Save button, with the arrow that offers it.
     let file = gio::Menu::new();
     file.append(Some(&gettext("_Open…")), Some("win.open"));
     file.append(Some(&gettext("_Reload")), Some("win.reload"));
     file.append(Some(&gettext("_Save")), Some("win.save"));
-    file.append(Some(&gettext("Save _As…")), Some("win.save-as"));
 
     let about = gio::Menu::new();
     about.append(Some(&gettext("_Keyboard Shortcuts")), Some("win.shortcuts"));
@@ -194,13 +185,38 @@ pub(super) fn primary_menu() -> gio::Menu {
     menu.append_section(None, &section(Axis::Column, AT_CURSOR));
     menu.append_section(None, &views(AT_CURSOR));
     menu.append_section(None, &view);
-    menu.append_section(None, &export);
     menu.append_section(None, &file);
     menu.append_section(None, &places());
     if let Some(tools) = tools() {
         menu.append_section(None, &tools);
     }
     menu.append_section(None, &about);
+    menu
+}
+
+/// What the arrow beside the Save button offers.
+///
+/// Two sections, and the line between them is the one the column menu draws:
+/// above it the document, written under another name and carried on from
+/// there; below it files that are output and never come back. Comma will not
+/// reopen any of the three, and none of them is the document.
+pub(super) fn save_menu() -> gio::Menu {
+    let elsewhere = gio::Menu::new();
+    elsewhere.append(Some(&gettext("Save _As…")), Some("win.save-as"));
+
+    let exports = gio::Menu::new();
+    for format in Format::ALL {
+        exports.append(
+            Some(&gettext(format.label())),
+            Some(&format!("win.{}", format.action())),
+        );
+    }
+
+    let menu = gio::Menu::new();
+    menu.append_section(None, &elsewhere);
+    // The section says Export so that the entries under it do not have to: what
+    // each one is called finishes the sentence this heading starts.
+    menu.append_section(Some(&gettext("Export")), &exports);
     menu
 }
 

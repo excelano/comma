@@ -17,6 +17,15 @@ template $CommaWindow: Adw.ApplicationWindow {
           title: _("Comma");
         };
 
+        // First, and an icon rather than a word, because it is the one control
+        // here that is not about the file this window holds.
+        [start]
+        Button {
+          icon-name: "document-new-symbolic";
+          action-name: "app.new-window";
+          tooltip-text: _("New Window");
+        }
+
         [start]
         Button open_button {
           label: _("_Open");
@@ -25,8 +34,11 @@ template $CommaWindow: Adw.ApplicationWindow {
           tooltip-text: _("Open a File");
         }
 
+        // Pressing it saves; the arrow beside it holds the other ways of
+        // writing the file out, which had been two levels down in the main
+        // menu and are now one click from the button they belong to.
         [start]
-        Button {
+        Adw.SplitButton save_button {
           label: _("_Save");
           use-underline: true;
           action-name: "win.save";

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-14 14:28-0500\n"
+"POT-Creation-Date: 2026-08-14 14:42-0500\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -300,16 +300,16 @@ msgstr ""
 "möchte. Was das Raster zeigt, lässt sich als PDF, als Webseite oder als "
 "OpenDocument-Tabelle exportieren."
 
-#: src/application.rs:147
+#: src/application.rs:158
 msgid "Show the version and exit"
 msgstr "Die Version anzeigen und beenden"
 
 #. Plural, because a file per window is what open() does with them.
-#: src/application.rs:152
+#: src/application.rs:163
 msgid "[FILE…]"
 msgstr "[DATEI …]"
 
-#: src/application.rs:154
+#: src/application.rs:165
 msgid ""
 "Edit CSV, TSV and other delimited text files as a grid.\n"
 "Each file named opens in a window of its own."
@@ -321,64 +321,68 @@ msgstr ""
 msgid "Empty"
 msgstr "Leer"
 
-#: src/gtk/window.blp:22
+#: src/gtk/window.blp:26 src/shortcuts.rs:39
+msgid "New Window"
+msgstr "Neues Fenster"
+
+#: src/gtk/window.blp:31
 msgid "_Open"
 msgstr "Ö_ffnen"
 
-#: src/gtk/window.blp:25 src/shortcuts.rs:39
+#: src/gtk/window.blp:34 src/shortcuts.rs:40
 msgid "Open a File"
 msgstr "Eine Datei öffnen"
 
-#: src/gtk/window.blp:30 src/window/files.rs:306 src/window/menus.rs:184
+#: src/gtk/window.blp:42 src/window/files.rs:306 src/window/menus.rs:176
 #: src/window/place.rs:176
 msgid "_Save"
 msgstr "_Speichern"
 
-#: src/gtk/window.blp:33
+#: src/gtk/window.blp:45
 msgid "Save This File"
 msgstr "Diese Datei speichern"
 
-#: src/gtk/window.blp:40
+#: src/gtk/window.blp:52
 msgid "Main Menu"
 msgstr "Hauptmenü"
 
-#: src/gtk/window.blp:46 src/shortcuts.rs:59
+#: src/gtk/window.blp:58 src/shortcuts.rs:64
 msgid "Find and Replace"
 msgstr "Suchen und Ersetzen"
 
-#: src/gtk/window.blp:54
+#: src/gtk/window.blp:66
 msgid "How This File Is Read"
 msgstr "Wie diese Datei gelesen wird"
 
-#: src/gtk/window.blp:72
+#: src/gtk/window.blp:84
 msgid "Find"
 msgstr "Suchen"
 
-#: src/gtk/window.blp:78
+#: src/gtk/window.blp:90
 msgid "Replace With"
 msgstr "Ersetzen durch"
 
-#: src/gtk/window.blp:84
+#: src/gtk/window.blp:96
 msgid "Replace _All"
 msgstr "_Alle ersetzen"
 
-#: src/gtk/window.blp:115
+#: src/gtk/window.blp:127
 msgid "Clear _All"
 msgstr "_Alle entfernen"
 
-#: src/gtk/window.blp:118
+#: src/gtk/window.blp:130
 msgid "Show Every Row Again"
 msgstr "Wieder alle Zeilen anzeigen"
 
-#: src/gtk/window.blp:128
+#: src/gtk/window.blp:140
 msgid "No File Open"
 msgstr "Keine Datei geöffnet"
 
-#: src/gtk/window.blp:129
+#: src/gtk/window.blp:141
 msgid "Comma edits CSV, TSV, and other delimited text files."
 msgstr "Comma bearbeitet CSV-, TSV- und andere Textdateien mit Trennzeichen."
 
-#: src/gtk/window.blp:132
+#: src/gtk/window.blp:144
 msgid "_Open File…"
 msgstr "Datei ö_ffnen …"
 
@@ -390,87 +394,91 @@ msgstr "Seite {of}"
 msgid "File"
 msgstr "Datei"
 
-#: src/shortcuts.rs:40
+#: src/shortcuts.rs:41
 msgid "Save"
 msgstr "Speichern"
 
-#: src/shortcuts.rs:41
+#: src/shortcuts.rs:42
 msgid "Save As"
 msgstr "Speichern unter"
 
-#: src/shortcuts.rs:43
+#: src/shortcuts.rs:44
 msgid "Read the File Again"
 msgstr "Datei neu einlesen"
 
-#: src/shortcuts.rs:46
+#: src/shortcuts.rs:48
+msgid "Close This Window"
+msgstr "Dieses Fenster schließen"
+
+#: src/shortcuts.rs:51
 msgid "Quit"
 msgstr "Beenden"
 
-#: src/shortcuts.rs:50
+#: src/shortcuts.rs:55
 msgid "Editing"
 msgstr "Bearbeiten"
 
-#: src/shortcuts.rs:52
+#: src/shortcuts.rs:57
 msgid "Edit the Cell"
 msgstr "Zelle bearbeiten"
 
-#: src/shortcuts.rs:54
+#: src/shortcuts.rs:59
 msgid "Insert a Line Break"
 msgstr "Zeilenumbruch einfügen"
 
-#: src/shortcuts.rs:57
+#: src/shortcuts.rs:62
 msgid "Undo"
 msgstr "Rückgängig"
 
-#: src/shortcuts.rs:58
+#: src/shortcuts.rs:63
 msgid "Redo"
 msgstr "Wiederholen"
 
-#: src/shortcuts.rs:63
+#: src/shortcuts.rs:68
 msgid "What the Grid Is Showing"
 msgstr "Was die Tabelle zeigt"
 
-#: src/shortcuts.rs:65
+#: src/shortcuts.rs:70
 msgid "Filter This Column"
 msgstr "Diese Spalte filtern"
 
-#: src/shortcuts.rs:70
+#: src/shortcuts.rs:75
 msgid "Moving Around the Table"
 msgstr "Bewegen in der Tabelle"
 
-#: src/shortcuts.rs:72
+#: src/shortcuts.rs:77
 msgid "One Cell Up"
 msgstr "Eine Zelle nach oben"
 
-#: src/shortcuts.rs:73
+#: src/shortcuts.rs:78
 msgid "One Cell Down"
 msgstr "Eine Zelle nach unten"
 
-#: src/shortcuts.rs:74
+#: src/shortcuts.rs:79
 msgid "One Cell Left"
 msgstr "Eine Zelle nach links"
 
-#: src/shortcuts.rs:75
+#: src/shortcuts.rs:80
 msgid "One Cell Right"
 msgstr "Eine Zelle nach rechts"
 
-#: src/shortcuts.rs:76
+#: src/shortcuts.rs:81
 msgid "Start of the Row"
 msgstr "Anfang der Zeile"
 
-#: src/shortcuts.rs:77
+#: src/shortcuts.rs:82
 msgid "End of the Row"
 msgstr "Ende der Zeile"
 
-#: src/shortcuts.rs:78
+#: src/shortcuts.rs:83
 msgid "Start of the File"
 msgstr "Anfang der Datei"
 
-#: src/shortcuts.rs:79
+#: src/shortcuts.rs:84
 msgid "End of the File"
 msgstr "Ende der Datei"
 
-#: src/shortcuts.rs:113
+#: src/shortcuts.rs:118
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
@@ -498,13 +506,13 @@ msgstr "Spalte danach einfügen"
 msgid "Delete Column"
 msgstr "Spalte löschen"
 
-#: src/window.rs:780
+#: src/window.rs:784
 msgid "Reloaded. Some filters were on columns the file no longer has."
 msgstr ""
 "Neu eingelesen. Einige Filter galten für Spalten, die die Datei nicht mehr "
 "hat."
 
-#: src/window.rs:1185
+#: src/window.rs:1189
 msgid "_Close"
 msgstr "S_chließen"
 
@@ -565,7 +573,7 @@ msgstr "Diese Datei hat sich auf dem Datenträger geändert"
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
-#: src/window/files.rs:237 src/window/menus.rs:185
+#: src/window/files.rs:237 src/window/menus.rs:205
 msgid "Save _As…"
 msgstr "Speichern _unter …"
 
@@ -591,7 +599,9 @@ msgstr "Änderungen speichern?"
 msgid "_Discard"
 msgstr "_Verwerfen"
 
-#: src/window/files.rs:332
+#. The section says Export so that the entries under it do not have to: what
+#. each one is called finishes the sentence this heading starts.
+#: src/window/files.rs:332 src/window/menus.rs:219
 msgid "Export"
 msgstr "Exportieren"
 
@@ -754,63 +764,59 @@ msgstr "Diese Reihenfolge auf die Datei anwenden"
 msgid "Clear All Filters"
 msgstr "Alle Filter entfernen"
 
-#: src/window/menus.rs:179
-msgid "_Export"
-msgstr "_Exportieren"
-
-#: src/window/menus.rs:182
+#: src/window/menus.rs:174
 msgid "_Open…"
 msgstr "Ö_ffnen …"
 
-#: src/window/menus.rs:183 src/window/watch.rs:60
+#: src/window/menus.rs:175 src/window/watch.rs:60
 msgid "_Reload"
 msgstr "Neu _einlesen"
 
-#: src/window/menus.rs:188
+#: src/window/menus.rs:179
 msgid "_Keyboard Shortcuts"
 msgstr "_Tastenkürzel"
 
-#: src/window/menus.rs:189
+#: src/window/menus.rs:180
 msgid "_About Comma"
 msgstr "_Info zu Comma"
 
-#: src/window/menus.rs:212
+#: src/window/menus.rs:228
 msgid "Open Containing _Folder"
 msgstr "Enthaltenden _Ordner öffnen"
 
-#: src/window/menus.rs:217
+#: src/window/menus.rs:233
 msgid "Open in _Terminal"
 msgstr "Im _Terminal öffnen"
 
-#: src/window/menus.rs:252
+#: src/window/menus.rs:268
 msgid "First Row Is a Header"
 msgstr "Erste Zeile ist eine Kopfzeile"
 
-#: src/window/menus.rs:255
+#: src/window/menus.rs:271
 msgid "Delimiter"
 msgstr "Trennzeichen"
 
-#: src/window/menus.rs:283
+#: src/window/menus.rs:299
 msgctxt "delimiter"
 msgid "Comma"
 msgstr "Komma"
 
-#: src/window/menus.rs:284
+#: src/window/menus.rs:300
 msgctxt "delimiter"
 msgid "Tab"
 msgstr "Tabulator"
 
-#: src/window/menus.rs:285
+#: src/window/menus.rs:301
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr "Semikolon"
 
-#: src/window/menus.rs:286
+#: src/window/menus.rs:302
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr "Senkrechter Strich"
 
-#: src/window/menus.rs:287
+#: src/window/menus.rs:303
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr "ASCII-Trennzeichen"
@@ -859,3 +865,6 @@ msgstr "Diese Datei ist nicht mehr auf dem Datenträger."
 #: src/window/watch.rs:161
 msgid "Reloaded. The file had changed on disk."
 msgstr "Neu eingelesen. Die Datei hatte sich auf dem Datenträger geändert."
+
+#~ msgid "_Export"
+#~ msgstr "_Exportieren"

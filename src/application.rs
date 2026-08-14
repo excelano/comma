@@ -106,9 +106,20 @@ impl CommaApplication {
         let about = gio::ActionEntry::builder("about")
             .activate(|application: &Self, _, _| application.show_about())
             .build();
-        self.add_action_entries([quit, about]);
+        // A window holds one document, so a second document needs a second
+        // window. This is what open() does for every file it is handed, and
+        // until now it was the only thing that could.
+        let new_window = gio::ActionEntry::builder("new-window")
+            .activate(|application: &Self, _, _| CommaWindow::new(application).present())
+            .build();
+        self.add_action_entries([quit, about, new_window]);
 
         self.set_accels_for_action("app.quit", &["<primary>q"]);
+        self.set_accels_for_action("app.new-window", &["<primary>n"]);
+        // GTK installs this one on every window itself. Comma's close_request
+        // asks about an unsaved document before letting it go, so the key
+        // inherits that and needs nothing of its own.
+        self.set_accels_for_action("window.close", &["<primary>w"]);
         self.set_accels_for_action("win.open", &["<primary>o"]);
         self.set_accels_for_action("win.save", &["<primary>s"]);
         self.set_accels_for_action("win.reload", &["<primary>r"]);
