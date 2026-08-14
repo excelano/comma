@@ -39,6 +39,27 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.10" date="2026-08-14">
+      <description>
+        <p>
+          Comma can open a second window. A button at the left of the header
+          bar, or Ctrl+N, gives you an empty one to open another file in, which
+          until now took naming both files on the command line or quitting
+          Comma first. Ctrl+W closes the window you are in, and asks before
+          it goes if there is anything unsaved in it.
+        </p>
+        <p>
+          Saving a file under another name, and writing one out as a PDF, a
+          web page or a spreadsheet, have moved out of the main menu to the
+          arrow beside the Save button, a click from the button they belong
+          to.
+        </p>
+        <p>
+          The exports no longer offer themselves on a window with no file
+          open.
+        </p>
+      </description>
+    </release>
     <release version="0.1.9" date="2026-08-14">
       <description>
         <p>
