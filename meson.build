@@ -1,7 +1,7 @@
 project(
   'comma',
   'rust',
-  version: '0.1.10',
+  version: '0.1.11',
   license: 'MIT',
   meson_version: '>= 1.0.0',
 )

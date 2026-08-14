@@ -39,6 +39,26 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.11" date="2026-08-14">
+      <description>
+        <p>
+          The files you have had open are a click away. The arrow beside Open
+          lists them, newest first, with a box to search through them when the
+          list is long. Clicking one opens it here, and asks first if there is
+          anything unsaved in the window.
+        </p>
+        <p>
+          Comma also puts the files it opens into the desktop's own recent
+          documents now, so a file edited here turns up in the Files sidebar
+          and wherever else your desktop lists what you have been working on.
+          Saving under a new name files that name as well.
+        </p>
+        <p>
+          A file opened from a share or a server says which folder it is in,
+          where before it said nothing.
+        </p>
+      </description>
+    </release>
     <release version="0.1.10" date="2026-08-14">
       <description>
         <p>
