@@ -3,9 +3,10 @@
 // What is here is the window itself — the widget, the state it holds, the
 // actions everything else is reached through, and what the window says about
 // the document. The rest is next door: `cursor` for where the keyboard is,
-// `files` for where the document comes from and goes, `showing` for which rows
-// the grid is showing and in what order, `menus` for the menus, and `place` for
-// handing the file to something outside the window.
+// `files` for where the document comes from and goes, `recent` for the files
+// that have been open here before, `showing` for which rows the grid is showing
+// and in what order, `menus` for the menus, and `place` for handing the file to
+// something outside the window.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
@@ -15,6 +16,7 @@ mod files;
 mod filters;
 mod menus;
 mod place;
+mod recent;
 mod showing;
 mod watch;
 
@@ -39,6 +41,7 @@ use cursor::Cursor;
 use files::{Format, Task};
 use menus::{PRESETS, column_menu, preset, primary_menu, reading_menu, save_menu};
 use place::Tool;
+use recent::Recent;
 use watch::Adrift;
 
 pub use cursor::key_for;
@@ -179,7 +182,22 @@ mod imp {
         #[template_child]
         pub across: TemplateChild<gtk::Scrollbar>,
         #[template_child]
-        pub open_button: TemplateChild<gtk::Button>,
+        pub open_button: TemplateChild<adw::SplitButton>,
+        /// The popover under the arrow beside Open, and what is in it.
+        #[template_child]
+        pub recents: TemplateChild<gtk::Popover>,
+        #[template_child]
+        pub recent_search: TemplateChild<gtk::SearchEntry>,
+        #[template_child]
+        pub recent_list: TemplateChild<gtk::ListBox>,
+        /// What the list says when it has nothing to show, which is one of two
+        /// things depending on why.
+        #[template_child]
+        pub recents_message: TemplateChild<gtk::Label>,
+        /// The file each row of that list stands for, in the order the rows
+        /// were put there. Searching hides rows rather than moving them, so a
+        /// row's place in the box is its place here.
+        pub recents_shown: RefCell<Vec<Recent>>,
         #[template_child]
         pub save_button: TemplateChild<adw::SplitButton>,
         #[template_child]
@@ -267,6 +285,11 @@ mod imp {
                 gutter_view: TemplateChild::default(),
                 across: TemplateChild::default(),
                 open_button: TemplateChild::default(),
+                recents: TemplateChild::default(),
+                recent_search: TemplateChild::default(),
+                recent_list: TemplateChild::default(),
+                recents_message: TemplateChild::default(),
+                recents_shown: RefCell::default(),
                 save_button: TemplateChild::default(),
                 menu_button: TemplateChild::default(),
                 dialect_button: TemplateChild::default(),
@@ -361,6 +384,7 @@ mod imp {
                 }
             ));
 
+            window.setup_recents();
             window.setup_search();
             window.setup_filters();
             window.setup_navigation();
@@ -432,6 +456,13 @@ impl CommaWindow {
             .activate(|window: &Self, _, _| {
                 window.save();
             })
+            .build();
+
+        // The arrow beside Open, as something that can be asked for rather
+        // than only clicked. Same reason as `edit` below: anything driving
+        // Comma from outside the window reaches it by name or not at all.
+        let recent_files = gio::ActionEntry::builder("recent-files")
+            .activate(|window: &Self, _, _| window.imp().recents.popup())
             .build();
 
         let save_as = gio::ActionEntry::builder("save-as")
@@ -603,6 +634,7 @@ impl CommaWindow {
 
         let mut entries = vec![
             open,
+            recent_files,
             save,
             save_as,
             reload,

@@ -26,12 +26,49 @@ template $CommaWindow: Adw.ApplicationWindow {
           tooltip-text: _("New Window");
         }
 
+        // Pressing it asks where; the arrow beside it offers the files
+        // already worked on, which is where the answer usually is.
         [start]
-        Button open_button {
+        Adw.SplitButton open_button {
           label: _("_Open");
           use-underline: true;
           action-name: "win.open";
           tooltip-text: _("Open a File");
+
+          popover: Popover recents {
+            child: Box {
+              orientation: vertical;
+              spacing: 6;
+              width-request: 300;
+
+              SearchEntry recent_search {
+                placeholder-text: _("Search Recent Files");
+              }
+
+              ScrolledWindow {
+                hscrollbar-policy: never;
+                propagate-natural-height: true;
+                max-content-height: 400;
+
+                child: ListBox recent_list {
+                  selection-mode: none;
+
+                  [placeholder]
+                  Label recents_message {
+                    margin-top: 18;
+                    margin-bottom: 18;
+                    margin-start: 6;
+                    margin-end: 6;
+                    wrap: true;
+
+                    styles [
+                      "dim-label",
+                    ]
+                  }
+                };
+              }
+            };
+          };
         }
 
         // Pressing it saves; the arrow beside it holds the other ways of

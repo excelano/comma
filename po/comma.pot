@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-14 14:48-0500\n"
+"POT-Creation-Date: 2026-08-14 16:03-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -256,64 +256,68 @@ msgstr ""
 msgid "New Window"
 msgstr ""
 
-#: src/gtk/window.blp:31
+#: src/gtk/window.blp:33
 msgid "_Open"
 msgstr ""
 
-#: src/gtk/window.blp:34 src/shortcuts.rs:40
+#: src/gtk/window.blp:36 src/shortcuts.rs:40
 msgid "Open a File"
 msgstr ""
 
-#: src/gtk/window.blp:42 src/window/files.rs:306 src/window/menus.rs:176
+#: src/gtk/window.blp:45
+msgid "Search Recent Files"
+msgstr ""
+
+#: src/gtk/window.blp:79 src/window/files.rs:310 src/window/menus.rs:176
 #: src/window/place.rs:176
 msgid "_Save"
 msgstr ""
 
-#: src/gtk/window.blp:45
+#: src/gtk/window.blp:82
 msgid "Save This File"
 msgstr ""
 
-#: src/gtk/window.blp:52
+#: src/gtk/window.blp:89
 msgid "Main Menu"
 msgstr ""
 
-#: src/gtk/window.blp:58 src/shortcuts.rs:64
+#: src/gtk/window.blp:95 src/shortcuts.rs:64
 msgid "Find and Replace"
 msgstr ""
 
-#: src/gtk/window.blp:66
+#: src/gtk/window.blp:103
 msgid "How This File Is Read"
 msgstr ""
 
-#: src/gtk/window.blp:84
+#: src/gtk/window.blp:121
 msgid "Find"
 msgstr ""
 
-#: src/gtk/window.blp:90
+#: src/gtk/window.blp:127
 msgid "Replace With"
 msgstr ""
 
-#: src/gtk/window.blp:96
+#: src/gtk/window.blp:133
 msgid "Replace _All"
 msgstr ""
 
-#: src/gtk/window.blp:127
+#: src/gtk/window.blp:164
 msgid "Clear _All"
 msgstr ""
 
-#: src/gtk/window.blp:130
+#: src/gtk/window.blp:167
 msgid "Show Every Row Again"
 msgstr ""
 
-#: src/gtk/window.blp:140
+#: src/gtk/window.blp:177
 msgid "No File Open"
 msgstr ""
 
-#: src/gtk/window.blp:141
+#: src/gtk/window.blp:178
 msgid "Comma edits CSV, TSV, and other delimited text files."
 msgstr ""
 
-#: src/gtk/window.blp:144
+#: src/gtk/window.blp:181
 msgid "_Open File…"
 msgstr ""
 
@@ -413,35 +417,35 @@ msgstr ""
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:92
+#: src/window.rs:95
 msgid "Insert Row Above"
 msgstr ""
 
-#: src/window.rs:100
+#: src/window.rs:103
 msgid "Insert Row Below"
 msgstr ""
 
-#: src/window.rs:110
+#: src/window.rs:113
 msgid "Delete Row"
 msgstr ""
 
-#: src/window.rs:118
+#: src/window.rs:121
 msgid "Insert Column Before"
 msgstr ""
 
-#: src/window.rs:126
+#: src/window.rs:129
 msgid "Insert Column After"
 msgstr ""
 
-#: src/window.rs:134
+#: src/window.rs:137
 msgid "Delete Column"
 msgstr ""
 
-#: src/window.rs:787
+#: src/window.rs:819
 msgid "Reloaded. Some filters were on columns the file no longer has."
 msgstr ""
 
-#: src/window.rs:1192
+#: src/window.rs:1224
 msgid "_Close"
 msgstr ""
 
@@ -485,64 +489,64 @@ msgstr ""
 msgid "Open File"
 msgstr ""
 
-#: src/window/files.rs:229
+#: src/window/files.rs:233
 msgid ""
 "“{}” has been written to since Comma read it. Saving replaces what was "
 "written there."
 msgstr ""
 
-#: src/window/files.rs:233
+#: src/window/files.rs:237
 msgid "This File Has Changed on Disk"
 msgstr ""
 
-#: src/window/files.rs:236 src/window/files.rs:304 src/window/filters.rs:241
+#: src/window/files.rs:240 src/window/files.rs:308 src/window/filters.rs:241
 #: src/window/place.rs:174
 msgid "_Cancel"
 msgstr ""
 
-#: src/window/files.rs:237 src/window/menus.rs:205
+#: src/window/files.rs:241 src/window/menus.rs:205
 msgid "Save _As…"
 msgstr ""
 
-#: src/window/files.rs:238
+#: src/window/files.rs:242
 msgid "_Overwrite"
 msgstr ""
 
-#: src/window/files.rs:260
+#: src/window/files.rs:264
 msgid "Save File"
 msgstr ""
 
-#: src/window/files.rs:301
+#: src/window/files.rs:305
 msgid "“{}” has unsaved changes. Changes that are not saved will be lost."
 msgstr ""
 
-#: src/window/files.rs:303
+#: src/window/files.rs:307
 msgid "Save Changes?"
 msgstr ""
 
-#: src/window/files.rs:305
+#: src/window/files.rs:309
 msgid "_Discard"
 msgstr ""
 
 #. The section says Export so that the entries under it do not have to: what
 #. each one is called finishes the sentence this heading starts.
-#: src/window/files.rs:332 src/window/menus.rs:219
+#: src/window/files.rs:336 src/window/menus.rs:219
 msgid "Export"
 msgstr ""
 
-#: src/window/files.rs:383
+#: src/window/files.rs:387
 msgid "A PDF can only be written to a folder on this computer."
 msgstr ""
 
-#: src/window/files.rs:414 src/window/files.rs:455
+#: src/window/files.rs:418 src/window/files.rs:459
 msgid "Untitled"
 msgstr ""
 
-#: src/window/files.rs:437
+#: src/window/files.rs:441
 msgid "Delimited Text"
 msgstr ""
 
-#: src/window/files.rs:443
+#: src/window/files.rs:447
 msgid "All Files"
 msgstr ""
 
@@ -774,6 +778,14 @@ msgstr ""
 
 #: src/window/place.rs:230
 msgid "Could not open a terminal."
+msgstr ""
+
+#: src/window/recent.rs:142
+msgid "No Recent Files"
+msgstr ""
+
+#: src/window/recent.rs:144
+msgid "No Results Found"
 msgstr ""
 
 #: src/window/watch.rs:51

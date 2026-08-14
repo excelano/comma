@@ -148,6 +148,7 @@ impl CommaWindow {
 
         self.imp().file.replace(Some(file.clone()));
         self.note_the_file();
+        self.remember_file(file);
         self.watch_file();
         self.show(document);
         self.show_folder(file);
@@ -216,6 +217,9 @@ impl CommaWindow {
         // next write by anybody else will be told apart from. Save As leaves
         // the old file behind as well, so what is watched moves with it.
         self.note_the_file();
+        // Under this name now, whether that is the name it came in under or a
+        // new one Save As gave it.
+        self.remember_file(file);
         self.watch_file();
         self.show_folder(file);
         self.show_state();
@@ -457,9 +461,17 @@ fn display_name(file: &gio::File) -> String {
 
 /// The folder the file is in, with the home directory written the way people
 /// write it.
-fn folder_of(file: &gio::File) -> String {
-    let Some(folder) = file.parent().and_then(|parent| parent.path()) else {
+///
+/// A file reached over the network has no path on this computer, so what is
+/// said about it is where GIO would say it is. Saying nothing was the other
+/// answer, and it left a file opened from a share looking like one with no
+/// folder at all.
+pub(super) fn folder_of(file: &gio::File) -> String {
+    let Some(parent) = file.parent() else {
         return String::new();
+    };
+    let Some(folder) = parent.path() else {
+        return parent.parse_name().to_string();
     };
 
     match folder.strip_prefix(glib::home_dir()) {

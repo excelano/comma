@@ -10,4 +10,5 @@ src/window/files.rs
 src/window/filters.rs
 src/window/menus.rs
 src/window/place.rs
+src/window/recent.rs
 src/window/watch.rs
