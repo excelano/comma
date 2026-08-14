@@ -10,7 +10,7 @@ use gettextrs::gettext;
 use gtk::gio;
 use gtk::glib;
 
-use comma::document::{Document, sniff};
+use comma::document::{Dialect, Document, sniff, sniff_header};
 use comma::export::{self, Sheet};
 
 use crate::pdf;
@@ -133,23 +133,38 @@ impl CommaWindow {
 
         // Nothing on screen changes until the file has been read, so a file
         // that will not open leaves the one that did alone.
-        let document = match Document::from_bytes(&bytes, sniff(&bytes)) {
+        let dialect = sniff(&bytes);
+        let document = match Document::from_bytes(&bytes, dialect) {
             Ok(document) => document,
             Err(error) => {
                 return self.report(Task::Open, &error.to_string());
             }
         };
 
-        // A new file carries no opinions over from the last one. Its first row
-        // is data until this file's own user says otherwise.
-        self.imp().rows.set_header(false);
-        self.set_action_state("header", &false.to_variant());
+        // A new file carries no opinions over from the last one. What its first
+        // record is gets guessed from the file itself, the same as the
+        // delimiter was.
+        self.guess_header(&bytes, dialect);
 
         self.imp().file.replace(Some(file.clone()));
         self.note_the_file();
         self.watch_file();
         self.show(document);
         self.show_folder(file);
+    }
+
+    /// Puts a guess about the first record in front of the user, and leaves it
+    /// standing as a guess.
+    ///
+    /// Marking it matters, because the delimiter can still change. A guess made
+    /// under one delimiter was made about columns another delimiter does not
+    /// find, so it is made again; an answer the user gave was about this file
+    /// and is not second-guessed.
+    pub(super) fn guess_header(&self, bytes: &[u8], dialect: Dialect) {
+        let header = sniff_header(bytes, dialect);
+        self.imp().rows.set_header(header);
+        self.set_action_state("header", &header.to_variant());
+        self.imp().header_is_a_guess.set(true);
     }
 
     /// Writes the document back to the file it came from, and says whether it

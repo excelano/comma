@@ -1,4 +1,6 @@
-// Guessing which dialect a file is written in.
+// Guessing the two things a delimited file does not say about itself: which
+// delimiter separates its fields, and whether its first record names the
+// columns or is one of them.
 //
 // The question "which delimiter is this?" is answered by asking a different
 // one: which delimiter makes the file look like a table? Each candidate is run
@@ -7,12 +9,17 @@
 // candidate cannot score well on quoting the parser would read differently,
 // because it is the parser doing the reading.
 //
+// The header is guessed the same way, from what the records hold rather than
+// from what the fields are called, and for the same reason: nothing here knows
+// anything about the file that the parser did not tell it.
+//
 // A guess is never silent. The window shows what was chosen and changing it is
 // one click, which is the whole reason a guess is acceptable here at all.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
+use super::Record;
 use super::dialect::{Dialect, RECORD_SEPARATOR};
 use super::parse;
 
@@ -140,4 +147,130 @@ fn measure(sample: &str, dialect: Dialect) -> Fit {
         records: widths.len(),
         width,
     }
+}
+
+/// Whether the first record of these bytes is column titles rather than data.
+///
+/// The file cannot say, any more than it can say which delimiter it uses, so
+/// the question is settled the same way: by looking at what the records hold.
+/// A column of figures with a word over it has a title on it, and so does one
+/// with nothing over it, since neither is another figure. A column of figures
+/// running all the way to the top has no title. A column of text says nothing
+/// either way, because a word above words is what both answers look like.
+///
+/// When no column has anything to say, the answer is yes. Delimited files
+/// usually carry titles, and the two ways of being wrong do not cost the same.
+/// A header mistaken for data is an ordinary row: it sorts into the body, hides
+/// behind a filter, and goes out to the other tools as a record. Data mistaken
+/// for a header sits at the top of the table in plain sight, changes nothing
+/// about the file, and is one click from being put back.
+pub fn sniff_header(bytes: &[u8], dialect: Dialect) -> bool {
+    let records = parse::parse(sample(bytes), dialect);
+
+    // Titles name the columns of something. With no record under them there is
+    // nothing named, and taking the only record there is would leave an empty
+    // table on screen looking like a file that would not open.
+    let Some((first, body)) = records.split_first() else {
+        return false;
+    };
+    if body.is_empty() {
+        return false;
+    }
+
+    let mut titles = 0;
+    let mut data = 0;
+    for column in 0..first.fields.len() {
+        match reading(first, body, column) {
+            Some(Reading::Titles) => titles += 1,
+            Some(Reading::Data) => data += 1,
+            None => {}
+        }
+    }
+
+    if titles != data {
+        return titles > data;
+    }
+
+    names_its_columns(first)
+}
+
+/// What one column says about the record above it.
+enum Reading {
+    Titles,
+    Data,
+}
+
+/// A column only speaks when its body is figures throughout. Then the record on
+/// top is one more figure, or it is a title: a word is a title, and so is a
+/// blank, which is what an unnamed index column looks like and what no row of
+/// figures looks like.
+///
+/// Blanks in the body are passed over rather than counted against. A column of
+/// figures with gaps in it is still a column of figures; one that is blank the
+/// whole way down holds no figures and says nothing.
+fn reading(first: &Record, body: &[Record], column: usize) -> Option<Reading> {
+    let mut figures = 0;
+    for record in body {
+        match kind(field(record, column)) {
+            Kind::Number => figures += 1,
+            Kind::Blank => {}
+            Kind::Text => return None,
+        }
+    }
+    if figures == 0 {
+        return None;
+    }
+
+    match kind(field(first, column)) {
+        Kind::Number => Some(Reading::Data),
+        Kind::Text | Kind::Blank => Some(Reading::Titles),
+    }
+}
+
+/// Whether a record would make a decent set of titles, which is what decides it
+/// when the columns are silent.
+///
+/// Titles name every column, and name them apart. A record with a hole in it or
+/// with the same word twice names neither, and is more likely a line of data or
+/// the heading of a report sitting above the table.
+fn names_its_columns(record: &Record) -> bool {
+    let mut named: Vec<&str> = Vec::with_capacity(record.fields.len());
+    for field in &record.fields {
+        let value = field.value.trim();
+        if value.is_empty() || named.contains(&value) {
+            return false;
+        }
+        named.push(value);
+    }
+    true
+}
+
+/// What a field looks like, coarsely enough to be right about files rather than
+/// about values.
+enum Kind {
+    Blank,
+    Number,
+    Text,
+}
+
+/// Anything holding digits and no letters counts as a number, which takes in
+/// the things that fill numeric columns without being numbers: dates, money,
+/// part numbers, a zip code with a leading zero. Getting those wrong the other
+/// way would silence the columns that have the most to say.
+fn kind(value: &str) -> Kind {
+    let value = value.trim();
+    if value.is_empty() {
+        return Kind::Blank;
+    }
+    if value.chars().any(char::is_alphabetic) || !value.chars().any(|c| c.is_ascii_digit()) {
+        return Kind::Text;
+    }
+    Kind::Number
+}
+
+fn field(record: &Record, column: usize) -> &str {
+    record
+        .fields
+        .get(column)
+        .map_or("", |field| field.value.as_str())
 }

@@ -25,7 +25,7 @@ mod sniff;
 
 pub use dialect::{Dialect, DialectError};
 pub use history::Extent;
-pub use sniff::sniff;
+pub use sniff::{sniff, sniff_header};
 
 use std::fmt;
 

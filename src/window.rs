@@ -246,6 +246,11 @@ mod imp {
         /// offers both halves; a row number offers only the rows.
         pub cell_menu: OnceCell<gtk::PopoverMenu>,
         pub row_menu: OnceCell<gtk::PopoverMenu>,
+        /// Whether the first record being read as titles is still Comma's guess
+        /// rather than the user's answer. A guess is made again when the
+        /// delimiter changes, since it was a guess about other columns; an
+        /// answer stands, since it was about this file.
+        pub header_is_a_guess: Cell<bool>,
         pub settings: gio::Settings,
     }
 
@@ -284,6 +289,7 @@ mod imp {
                 previous_sort: Cell::default(),
                 cell_menu: OnceCell::default(),
                 row_menu: OnceCell::default(),
+                header_is_a_guess: Cell::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -581,6 +587,10 @@ impl CommaWindow {
                 action.set_state(state);
 
                 if let Some(header) = state.get::<bool>() {
+                    // Only the user reaches this. Setting the state directly,
+                    // which is how a guess is shown, does not come through
+                    // here, so arriving means the question has been answered.
+                    window.imp().header_is_a_guess.set(false);
                     window.imp().rows.set_header(header);
                     window.rebuild_columns();
                 }
@@ -704,6 +714,13 @@ impl CommaWindow {
             // The edits came across; the history did not. What was undoable was
             // undoable in a shape the file no longer has.
             document.mark_modified();
+        }
+
+        // These are other columns than the ones the first record was judged
+        // against, so it is judged again — unless the user has answered for
+        // themselves since, in which case there is nothing left to guess.
+        if self.imp().header_is_a_guess.get() {
+            self.guess_header(&bytes, dialect);
         }
 
         self.show(document);
