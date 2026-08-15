@@ -4,7 +4,7 @@ A small GNOME editor for CSV, TSV, and other delimited text files. Comma shows a
 
 Values are treated as text and never reinterpreted, so leading zeros survive, long identifiers stay whole, and dates are whatever the file says they are. Comma is not a spreadsheet: there are no formulas, no cell formatting, and no second file format to save into. If you need those, Gnumeric and LibreOffice Calc are excellent and Comma is not trying to replace them.
 
-Comma is a sibling to [Apostrophe](https://gitlab.gnome.org/World/apostrophe). Both are named for punctuation, and both edit files whose structure is invisible skeleton rather than content.
+Comma took its inspiration from [Apostrophe](https://gitlab.gnome.org/World/apostrophe). Both are named for punctuation, and both edit files whose structure is invisible skeleton rather than content.
 
 ## Status
 
