@@ -144,9 +144,18 @@ impl CommaWindow {
     /// that knows is the window: the cells are recycled underneath it.
     pub(super) fn watch_focus(&self) {
         self.connect_focus_widget_notify(|window| {
-            let (Some(focused), Some(cell)) =
-                (gtk::prelude::RootExt::focus(window), window.focused_cell())
-            else {
+            let focus = gtk::prelude::RootExt::focus(window);
+            // Where to put the keyboard back if something takes it without
+            // being asked. Kept before the table is asked about, because the
+            // answer is as often somewhere else in the window.
+            if !grid::titles_pressed(&window.imp().column_view) {
+                window
+                    .imp()
+                    .was_focused
+                    .replace(focus.as_ref().map(|w| w.downgrade()).unwrap_or_default());
+            }
+
+            let (Some(focused), Some(cell)) = (focus, window.focused_cell()) else {
                 // Nothing in the table has the keyboard, so the row it was in
                 // stops being lit. The table's own row gives the tint up on its
                 // own, from `:focus-within`; the number beside it is in another
@@ -168,6 +177,20 @@ impl CommaWindow {
             // moment it begins.
             let on_the_cell = focused == *cell.upcast_ref::<gtk::Widget>();
             if !on_the_cell && !focused.is_ancestor(&cell) {
+                // Unless the keyboard was only handed here because a column is
+                // being taken hold of. GTK moves the focus to the view when a
+                // column is about to be dragged, which is not an arrival in the
+                // table and not a reason to light a cell up in it: the cursor
+                // belongs wherever it was before anyone touched the titles.
+                if grid::titles_pressed(&window.imp().column_view) {
+                    // Back where it was, rather than merely not moved on: GTK
+                    // has already taken it, and a row of the grid holding the
+                    // keyboard lights up whether or not a cell of it does.
+                    if let Some(before) = window.imp().was_focused.borrow().upgrade() {
+                        before.grab_focus();
+                    }
+                    return;
+                }
                 match window.imp().current.get() {
                     Some(cursor) => window.go_to(cursor.position, cursor.column),
                     None => {

@@ -19,11 +19,14 @@ mod cell;
 mod gutter;
 mod model;
 mod number;
+mod resize;
 mod row;
 
 pub use cell::{Cell, LINE_BREAK};
 pub use gutter::Gutter;
 pub use model::RowModel;
+pub use resize::setup as setup_resize;
+pub use resize::titles_pressed;
 pub use row::Row;
 
 use std::rc::Rc;

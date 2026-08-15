@@ -257,6 +257,11 @@ mod imp {
         /// outlives the focus that set it, so that reaching for a menu does not
         /// count as pointing somewhere else.
         pub current: Cell<Option<Cursor>>,
+        /// The widget the keyboard was on before anything took it away without
+        /// being asked to. Taking hold of a column does that: GTK hands the
+        /// focus to the view to drag one, and where it was is the only thing
+        /// that says where to put it back.
+        pub was_focused: RefCell<glib::WeakRef<gtk::Widget>>,
         /// Which column the grid was sorted by before the sorter last changed,
         /// which is the only way to tell a heading clicked a third time from
         /// one clicked for the first.
@@ -312,6 +317,7 @@ mod imp {
                 settling: Cell::default(),
                 adrift: Cell::default(),
                 current: Cell::default(),
+                was_focused: RefCell::default(),
                 previous_sort: Cell::default(),
                 cell_menu: OnceCell::default(),
                 row_menu: OnceCell::default(),
@@ -383,6 +389,10 @@ mod imp {
                     ActionGroupExt::activate_action(&window, "reload", None);
                 }
             ));
+
+            // The one thing about resizing a column that GTK leaves to
+            // whoever is using it: the last column's right edge.
+            grid::setup_resize(&self.column_view);
 
             window.setup_recents();
             window.setup_search();
