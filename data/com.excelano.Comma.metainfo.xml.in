@@ -39,6 +39,21 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.12" date="2026-08-15">
+      <description>
+        <p>
+          The last column can be made wider or narrower like every other one.
+          Its right edge answers to a drag from either side of the line, where
+          before it was the one edge in the table that answered to nothing.
+        </p>
+        <p>
+          Resizing a column no longer moves the keyboard. Taking hold of a
+          column used to put the cursor on a cell, and the cursor is what
+          decides which row or column the next insert or delete happens to. It
+          now stays where you left it.
+        </p>
+      </description>
+    </release>
     <release version="0.1.11" date="2026-08-14">
       <description>
         <p>

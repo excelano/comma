@@ -1,6 +1,6 @@
 [package]
 name = "comma"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2024"
 # The GTK bindings ask for this, and it is well above the 1.85 Debian 13 ships,
 # so building from source means a toolchain from rustup rather than from apt.
