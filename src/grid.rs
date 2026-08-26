@@ -24,6 +24,7 @@ mod row;
 
 pub use cell::{Cell, LINE_BREAK};
 pub use gutter::Gutter;
+pub use gutter::follow as follow_gutter;
 pub use model::RowModel;
 pub use resize::setup as setup_resize;
 pub use resize::titles_pressed;

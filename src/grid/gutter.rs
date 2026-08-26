@@ -3,10 +3,10 @@
 // They used to be column zero of the table, which put them inside the part of it
 // that scrolls sideways: the column headings stayed where they were and the
 // numbers naming the rows slid away under them. GtkColumnView cannot pin a
-// column, so the numbers are a second view beside the first, sharing the table's
-// vertical adjustment and the model behind it. Row n of one is row n of the
-// other by identity rather than by arithmetic, and the two move together because
-// one adjustment moves both.
+// column, so the numbers are a second view beside the first, sharing the model
+// behind the table and following where the table is scrolled to. Row n of one is
+// row n of the other by identity rather than by arithmetic, and `follow` below
+// is what keeps them level.
 //
 // It is a column view rather than a list view for the two things that line the
 // halves up. It draws its own header row, so the first number sits beside the
@@ -25,6 +25,96 @@ use gtk::prelude::*;
 
 use super::number::Number;
 use super::{Records, as_cell, visit};
+
+/// Keeps the numbers level with the table, without the two sharing the
+/// adjustment that says where they are.
+///
+/// Sharing the object was the first shape of this and is what made a file with
+/// line breaks in it stop drawing. Each GtkScrolledWindow writes its own idea of
+/// how tall the whole list is into its adjustment while it is being allocated,
+/// and a GtkColumnView only knows the height of the rows it has realised and
+/// estimates the rest. While rows are coming into view the two estimates differ,
+/// so each write made the other view ask to be laid out again, and neither
+/// number was wrong for long enough for the pair to stop. GTK's frame clock gives
+/// up after four tries and leaves the window with no allocation to draw from,
+/// which is a window that has stopped painting while everything else in it goes
+/// on working. Rows all one line tall reach the same total on the first pass and
+/// agree, which is why every file without a quoted line break in it was fine.
+///
+/// So the table's adjustment is the only one that says where the grid is, and
+/// the numbers are written from it. One direction: following both ways was tried
+/// and is the same fight under another name.
+pub fn follow(numbers: &gtk::ScrolledWindow, table: &gtk::ScrolledWindow) {
+    // Written on every change of the table's, and again whenever either
+    // adjustment is reshaped. The second is what recovers from the numbers being
+    // asked for a place further down than they had room for at the time: their
+    // own upper grows as rows are realised, and the value is asked for again
+    // rather than left where it was clamped.
+    for adjustment in [table.vadjustment(), numbers.vadjustment()] {
+        correct(&adjustment, numbers, table);
+    }
+
+    // A wheel over the numbers scrolls the table, and the numbers come along
+    // with it the way they do from anywhere else. Left to the scrolled window
+    // holding them, it would move its own adjustment instead and the numbers
+    // would walk away from the rows they name.
+    let wheel = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);
+    // Before the scrolled window's own, which is what it is replacing.
+    wheel.set_propagation_phase(gtk::PropagationPhase::Capture);
+    wheel.connect_scroll(glib::clone!(
+        #[weak]
+        table,
+        #[upgrade_or]
+        glib::Propagation::Proceed,
+        move |_, _, down| {
+            let scroll = table.vadjustment();
+            // The table's own step, so a click of the wheel moves the same
+            // distance whichever half of the grid it is over.
+            let step = match scroll.step_increment() {
+                0.0 => scroll.page_size() / 10.0,
+                step => step,
+            };
+            scroll.set_value(step.mul_add(down, scroll.value()));
+            glib::Propagation::Stop
+        }
+    ));
+    numbers.add_controller(wheel);
+}
+
+/// Puts the numbers back where the table is whenever this adjustment moves or is
+/// reshaped, whichever of the two it is.
+///
+/// The numbers' own is watched as well as the table's because a GtkListView
+/// moves the adjustment under it to keep hold of the row it was showing, and
+/// nothing else would notice the numbers wandering off on their own account.
+fn correct(
+    adjustment: &gtk::Adjustment,
+    numbers: &gtk::ScrolledWindow,
+    table: &gtk::ScrolledWindow,
+) {
+    adjustment.connect_changed(glib::clone!(
+        #[weak]
+        numbers,
+        #[weak]
+        table,
+        move |_| level(&numbers, &table)
+    ));
+    adjustment.connect_value_changed(glib::clone!(
+        #[weak]
+        numbers,
+        #[weak]
+        table,
+        move |_| level(&numbers, &table)
+    ));
+}
+
+/// Puts the numbers where the table is, if they are not there already.
+fn level(numbers: &gtk::ScrolledWindow, table: &gtk::ScrolledWindow) {
+    let (ours, theirs) = (numbers.vadjustment(), table.vadjustment());
+    if ours.value() != theirs.value() {
+        ours.set_value(theirs.value());
+    }
+}
 
 /// The row numbers beside the table.
 ///

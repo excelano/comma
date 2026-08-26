@@ -882,19 +882,19 @@ impl CommaWindow {
         }));
     }
 
-    /// Ties the row numbers to the table: one vertical adjustment moves both,
-    /// rather than one of them following the other a frame later.
+    /// Ties the row numbers to the table, and puts the horizontal scrollbar
+    /// under both halves.
     ///
-    /// That holds only while the two are the same height, so the table's
-    /// horizontal scrollbar is outside it and under both. Left inside, it takes
-    /// a strip off the bottom of the table that the gutter does not lose, and
-    /// the two disagree about how much of the file a screen holds. A scrollbar
-    /// of our own does not hide itself when there is nothing to scroll, which is
-    /// the one thing it costs.
+    /// The numbers follow the table rather than sharing its adjustment, for the
+    /// reason `grid::follow_gutter` sets out. Following only lands on the right
+    /// row while the two are the same height, so the table's horizontal
+    /// scrollbar is outside it and under both. Left inside, it takes a strip off
+    /// the bottom of the table that the gutter does not lose, and the two
+    /// disagree about how much of the file a screen holds. A scrollbar of our own does not hide
+    /// itself when there is nothing to scroll, which is the one thing it costs.
     fn share_scrolling(&self) {
         let imp = self.imp();
-        imp.gutter_scroller
-            .set_vadjustment(Some(&imp.table.vadjustment()));
+        grid::follow_gutter(&imp.gutter_scroller, &imp.table);
 
         let across = imp.table.hadjustment();
         imp.across.set_adjustment(Some(&across));
