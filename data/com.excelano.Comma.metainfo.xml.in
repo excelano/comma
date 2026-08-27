@@ -39,6 +39,23 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.13" date="2026-08-26">
+      <description>
+        <p>
+          A file with line breaks inside its values no longer stops drawing.
+          Scrolling down one could leave the window frozen with everything
+          behind it still running, on any file long enough to scroll where the
+          rows are not all the same height.
+        </p>
+        <p>
+          The number beside a row is that row's line in the file again. On those
+          same files the numbers used to drift out of step with the rows the
+          further you scrolled, so that a row could be drawn beside a number
+          several rows from its own. They are now drawn against the rows
+          themselves rather than counted separately.
+        </p>
+      </description>
+    </release>
     <release version="0.1.12" date="2026-08-15">
       <description>
         <p>
