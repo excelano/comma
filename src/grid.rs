@@ -24,7 +24,6 @@ mod row;
 
 pub use cell::{Cell, LINE_BREAK};
 pub use gutter::Gutter;
-pub use gutter::follow as follow_gutter;
 pub use model::RowModel;
 pub use resize::setup as setup_resize;
 pub use resize::titles_pressed;
@@ -124,8 +123,16 @@ pub fn cell_within(widget: &gtk::Widget) -> Option<Cell> {
 /// A point inside one of the grid's widgets, in the table's own coordinates,
 /// which is where a menu that hangs off the table has to be told to point.
 fn point_in_view(widget: &gtk::Widget, x: f64, y: f64) -> Option<(f64, f64)> {
-    let view = widget.ancestor(gtk::ColumnView::static_type())?;
-    let at = widget.compute_point(&view, &gtk::graphene::Point::new(x as f32, y as f32))?;
+    point_in(widget, gtk::ColumnView::static_type(), x, y)
+}
+
+/// The same, against whichever widget the press can be measured from. A cell is
+/// inside the table and says so directly; a row number is not inside anything
+/// the menu hangs off, so it says where it is in the gutter and the window turns
+/// that into the table's coordinates.
+fn point_in(widget: &gtk::Widget, kind: glib::Type, x: f64, y: f64) -> Option<(f64, f64)> {
+    let against = widget.ancestor(kind)?;
+    let at = widget.compute_point(&against, &gtk::graphene::Point::new(x as f32, y as f32))?;
     Some((at.x() as f64, at.y() as f64))
 }
 
@@ -203,6 +210,22 @@ thread_local! {
 /// one to ask afterwards measures again for all of them.
 pub(crate) fn forget_line_height() {
     LINE_HEIGHT.with(|known| known.set(0));
+}
+
+/// Where the row in front of us sits in the view, and which record of the file
+/// it is showing. Both, because they are different questions: a filter or a
+/// header line makes the second larger than the first, the keyboard is addressed
+/// by the first, and the number a person reads counts the second.
+///
+/// A row GTK is holding but not showing answers for wherever it was last used,
+/// so only rows that are mapped are worth asking.
+pub(crate) fn position_in(row: &gtk::Widget) -> Option<(u32, usize)> {
+    let mut found = None;
+    visit(row, &mut |cell: &cell::Cell| {
+        found = cell.position().zip(cell.row());
+        glib::ControlFlow::Break
+    });
+    found
 }
 
 fn remove_all_columns(column_view: &gtk::ColumnView) {

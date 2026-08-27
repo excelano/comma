@@ -169,16 +169,17 @@ mod imp {
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub column_view: TemplateChild<gtk::ColumnView>,
-        /// The table's scrolled window, which holds the adjustments both views
-        /// are moved by.
+        /// The table's scrolled window, which holds the adjustment the grid is
+        /// moved by.
         #[template_child]
         pub table: TemplateChild<gtk::ScrolledWindow>,
+        /// The row numbers, which hold the table rather than sit beside it: they
+        /// are drawn against the rows it has laid out, so they have to be laid
+        /// out after it.
         #[template_child]
-        pub gutter_scroller: TemplateChild<gtk::ScrolledWindow>,
-        #[template_child]
-        pub gutter_view: TemplateChild<gtk::ColumnView>,
-        /// The table's horizontal scrollbar, which is outside it so that it
-        /// takes its strip of height off the gutter as well.
+        pub gutter: TemplateChild<Gutter>,
+        /// The table's horizontal scrollbar, which is under both halves because
+        /// that is where a spreadsheet puts it.
         #[template_child]
         pub across: TemplateChild<gtk::Scrollbar>,
         #[template_child]
@@ -223,8 +224,6 @@ mod imp {
         #[template_child]
         pub chips: TemplateChild<gtk::Box>,
         pub rows: RowModel,
-        /// The row numbers, in a view of their own beside the table.
-        pub gutter: Gutter,
         /// The rows as the view has them, which is the document's rows put
         /// through whatever the user has asked to see. Hiding rows and putting
         /// them in another order are views of the file and change nothing about
@@ -286,8 +285,7 @@ mod imp {
                 stack: TemplateChild::default(),
                 column_view: TemplateChild::default(),
                 table: TemplateChild::default(),
-                gutter_scroller: TemplateChild::default(),
-                gutter_view: TemplateChild::default(),
+                gutter: TemplateChild::default(),
                 across: TemplateChild::default(),
                 open_button: TemplateChild::default(),
                 recents: TemplateChild::default(),
@@ -306,7 +304,6 @@ mod imp {
                 filter_bar: TemplateChild::default(),
                 chips: TemplateChild::default(),
                 rows: RowModel::default(),
-                gutter: Gutter::default(),
                 shown: gtk::FilterListModel::default(),
                 sorted: gtk::SortListModel::default(),
                 needle: RefCell::default(),
@@ -358,12 +355,8 @@ mod imp {
             self.shown.set_incremental(true);
             self.sorted.set_model(Some(&self.shown));
             self.sorted.set_sorter(self.column_view.sorter().as_ref());
-            // One model behind both views, so the numbers are in the order the
-            // table is in without being told, and row n of one is row n of the
-            // other by identity rather than by arithmetic.
             let model = gtk::NoSelection::new(Some(self.sorted.clone()));
             self.column_view.set_model(Some(&model));
-            self.gutter.attach(&self.gutter_view, &model);
             window.share_scrolling();
 
             // Which column the grid is sorted by decides whether there is an
@@ -882,20 +875,17 @@ impl CommaWindow {
         }));
     }
 
-    /// Ties the row numbers to the table, and puts the horizontal scrollbar
-    /// under both halves.
+    /// Puts the horizontal scrollbar under both halves of the grid.
     ///
-    /// The numbers follow the table rather than sharing its adjustment, for the
-    /// reason `grid::follow_gutter` sets out. Following only lands on the right
-    /// row while the two are the same height, so the table's horizontal
-    /// scrollbar is outside it and under both. Left inside, it takes a strip off
-    /// the bottom of the table that the gutter does not lose, and the two
-    /// disagree about how much of the file a screen holds. A scrollbar of our own does not hide
+    /// It used to be out here because it had to be: while the numbers were a
+    /// view of their own beside the table, a scrollbar inside the table took a
+    /// strip off the bottom of one and not the other, and the two then disagreed
+    /// about how much of the file a screen holds. There is one viewport now and
+    /// that reason has gone, but a bar spanning the numbers as well is where a
+    /// spreadsheet puts it, so it stays. A scrollbar of our own does not hide
     /// itself when there is nothing to scroll, which is the one thing it costs.
     fn share_scrolling(&self) {
         let imp = self.imp();
-        grid::follow_gutter(&imp.gutter_scroller, &imp.table);
-
         let across = imp.table.hadjustment();
         imp.across.set_adjustment(Some(&across));
         across.connect_changed(glib::clone!(
@@ -959,11 +949,6 @@ impl CommaWindow {
         imp.gutter
             .set_digits(grid::gutter_digits(document.borrow().row_count()));
         imp.rows.rows_changed(at, gone, come);
-        // The rows below the splice keep their widgets, which is what keeps the
-        // grid where it was scrolled to. What they cannot keep is the number
-        // beside them: that counts from the top of the file, and the file has
-        // changed above them.
-        imp.gutter.renumber();
 
         self.show_state();
     }

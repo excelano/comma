@@ -197,31 +197,12 @@ template $CommaWindow: Adw.ApplicationWindow {
           child: Box {
             orientation: vertical;
 
-            Box {
-              orientation: horizontal;
+            // The numbers hold the table rather than sit beside it. They are
+            // drawn against the rows the table has laid out, so they have to be
+            // laid out after it, and a widget that owns the table is the only
+            // way to be sure of the order.
+            $CommaGutter gutter {
               vexpand: true;
-
-              ScrolledWindow gutter_scroller {
-                hscrollbar-policy: external;
-                vscrollbar-policy: external;
-                // A scrolled window asks for nothing of its own, so beside a table
-                // that expands this one would be given no width at all.
-                propagate-natural-width: true;
-
-                child: ColumnView gutter_view {
-                  show-row-separators: true;
-                  reorderable: false;
-                  // The numbers answer to the mouse and to nothing else: a press
-                  // moves the cursor into that row, and the other button asks what
-                  // can be done to it. Tabbing into them would be a stop with no
-                  // key to press, so the keyboard goes straight to the cells.
-                  can-focus: false;
-
-                  styles [
-                    "gutter",
-                  ]
-                };
-              }
 
               ScrolledWindow table {
                 hexpand: true;

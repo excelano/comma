@@ -22,19 +22,21 @@
  * than where you are would say there was.
  *
  * The table lights its own row, because the cell holding the keyboard is inside
- * that row. The numbers are pinned in a view of their own and nothing they hold
- * has the focus, so the gutter is told which one to light and says so with a
- * class. One tint for the two of them: it is one row. */
+ * that row. Nothing the numbers hold has the focus, so the gutter is told which
+ * one to light and says so with a class. One tint for the two of them: it is one
+ * row. */
 columnview row:focus-within,
-columnview.gutter .current {
+.gutter .number.current {
   background-color: alpha(@accent_bg_color, 0.08);
 }
 
-/* Where the pinned numbers end and the table begins. The column separator said
- * this while the numbers were a column of the table, and there is no separator
- * between two views. */
-columnview.gutter {
-  border-right: 1px solid @borders;
+/* The line under each number, matching the one under the row it names. The
+ * numbers used to be rows of a column view and had these for nothing; they are
+ * placed against the table's rows now and have to draw their own. What divides
+ * the numbers from the table is a separator widget rather than a border, so the
+ * theme decides what a divider looks like. */
+.gutter .number {
+  border-bottom: 1px solid @borders;
 }
 
 /* Where the keyboard is. GTK draws no focus ring around a plain box, and

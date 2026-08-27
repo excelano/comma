@@ -52,19 +52,31 @@ impl CommaWindow {
     /// only on a row, so it offers only what a row can do — and the cursor has
     /// already been moved there, which is what the items act on.
     pub(super) fn show_row_menu(&self, x: f64, y: f64) {
-        let menu = self
-            .imp()
+        let imp = self.imp();
+        let menu = imp
             .row_menu
-            .get_or_init(|| self.popover(&section(Axis::Row, AT_CURSOR), &*self.imp().gutter_view));
-        point_at(menu, x, y);
+            .get_or_init(|| self.popover(&section(Axis::Row, AT_CURSOR), &*imp.column_view));
+        // Said in the gutter's coordinates, because that is what the number
+        // pressed could measure itself against, and wanted in the table's,
+        // because that is what the menu hangs off. The numbers are to the left
+        // of the table, so the point lands outside it and the menu opens against
+        // its edge, which is beside the number that was pressed.
+        let at = imp.gutter.compute_point(
+            &*imp.column_view,
+            &gtk::graphene::Point::new(x as f32, y as f32),
+        );
+        if let Some(at) = at {
+            point_at(menu, f64::from(at.x()).max(0.0), f64::from(at.y()));
+        }
     }
 
     /// A menu that hangs off one of the two views and is moved to wherever it is
     /// next asked for, rather than one built for each press.
     ///
-    /// Which view matters: the point it is opened at is measured against the one
-    /// the press landed in, and a row number is in the gutter rather than in the
-    /// table.
+    /// Which widget matters: the point it is opened at is measured against the
+    /// one it hangs off, and both of these hang off the table. A row number is
+    /// no longer inside a view of its own, so what it presses on has to be said
+    /// in the table's coordinates before the menu is pointed at it.
     fn popover(&self, model: &gio::Menu, at: &impl IsA<gtk::Widget>) -> gtk::PopoverMenu {
         let menu = gtk::PopoverMenu::from_model(Some(model));
         menu.set_has_arrow(false);

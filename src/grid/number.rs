@@ -1,22 +1,27 @@
 // The number down the side of the table, and the handle for the row it counts.
 //
 // It is a widget of its own rather than a bare label because a handle has to
-// know which row it is, and it has to know it twice over: the file's row, which
-// is what an operation is addressed by, and the view's position, which is where
-// the keyboard goes. Widgets are recycled as the table scrolls, so a number that
-// only had text in it would have nothing to say by the time it was clicked.
+// know which row it is: a press on it moves the keyboard there and the other
+// button asks what can be done to it, and a number that only had text in it
+// would have nothing to say by the time it was clicked.
+//
+// It is told where it is rather than asking, which is the other way round from
+// how this worked while the numbers were a view of their own. There is no view
+// now: the gutter puts a number against each row the table has drawn and says
+// which row that is, every time the grid is laid out, so a number cannot be left
+// naming a row that has moved.
 //
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
-use std::cell::RefCell;
+use std::cell::Cell as Value;
 
 use gtk::gdk;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use super::{Records, point_in_view};
+use super::point_in;
 
 mod imp {
     use super::*;
@@ -24,11 +29,13 @@ mod imp {
     #[derive(Debug, Default)]
     pub struct Number {
         pub label: gtk::Label,
-        /// The list item this number was put in, which is what GTK moves when
-        /// rows move, and so what still knows where this row is.
-        pub item: RefCell<glib::WeakRef<gtk::ColumnViewCell>>,
-        /// What to ask which record a position is showing.
-        pub records: RefCell<Option<Records>>,
+        /// Which row of the view this is drawn against, as of the last time the
+        /// grid was laid out. Nothing here works it out; the gutter says.
+        pub position: Value<Option<u32>>,
+        /// Which record of the file that row is showing, which is what the
+        /// number says. Kept apart from the position so that the text is only
+        /// written when it changes.
+        pub row: Value<Option<usize>>,
     }
 
     #[glib::object_subclass]
@@ -46,6 +53,7 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
 
+            self.obj().add_css_class("number");
             self.label.set_xalign(1.0);
             self.label.set_hexpand(true);
             self.label.set_css_classes(&["dim-label", "numeric"]);
@@ -57,21 +65,7 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for Number {
-        /// As for a cell: the number beside a row is sized the same way, and
-        /// has to stop believing the old measurement at the same moment.
-        fn system_setting_changed(&self, setting: &gtk::SystemSetting) {
-            if matches!(
-                setting,
-                gtk::SystemSetting::Dpi
-                    | gtk::SystemSetting::FontName
-                    | gtk::SystemSetting::FontConfig
-            ) {
-                super::super::forget_line_height();
-            }
-            self.parent_system_setting_changed(setting);
-        }
-    }
+    impl WidgetImpl for Number {}
 }
 
 glib::wrapper! {
@@ -81,22 +75,17 @@ glib::wrapper! {
 }
 
 impl Number {
-    pub(super) fn new(records: Records, item: &gtk::ColumnViewCell) -> Self {
+    pub(super) fn new() -> Self {
         let number: Self = glib::Object::new();
-        number.imp().records.replace(Some(records));
-        number.imp().item.replace(item.downgrade());
         number.set_accessible_role(gtk::AccessibleRole::RowHeader);
         number.connect_gestures();
         number
     }
 
-    /// Where this number's row sits in the view, now.
-    ///
-    /// Asked rather than remembered: a row put in above this one moves it
-    /// without binding it again, and a number that remembered where it was would
-    /// go on saying what the row below it says.
+    /// Where this number's row sits in the view, as of the last time the grid was
+    /// laid out.
     pub(super) fn position(&self) -> Option<u32> {
-        super::position_of(&self.imp().item.borrow())
+        self.imp().position.get()
     }
 
     /// Sizes the number to the widest one the file can show, so the gutter does
@@ -105,41 +94,30 @@ impl Number {
         self.imp().label.set_width_chars(digits);
     }
 
-    /// Lights the number, or stops. This says where the keyboard is, and says
-    /// nothing about selection: there is no such thing here.
-    pub(super) fn set_current(&self, current: bool) {
+    /// Says which row this counts, and whether the keyboard is on it.
+    ///
+    /// Files are numbered from one everywhere a person will read the number,
+    /// including in every other tool that opens them. How tall the number is is
+    /// not its business any more: the gutter gives it the height of the row it
+    /// is drawn against, which is the row's own height rather than a second
+    /// calculation that has to agree with it.
+    pub(super) fn show_row(&self, position: u32, row: usize, current: bool) {
+        let imp = self.imp();
+        imp.position.set(Some(position));
+        if imp.row.replace(Some(row)) != Some(row) {
+            let number = (row + 1).to_string();
+            imp.label.set_text(&number);
+            // The label is inside this widget rather than being it, so the
+            // number would otherwise be something a screen reader could see but
+            // not say. The role says it is a row header; there is nothing to add.
+            self.update_property(&[gtk::accessible::Property::Label(&number)]);
+        }
+
         if current {
             self.add_css_class("current");
         } else {
             self.remove_css_class("current");
         }
-    }
-
-    /// Says which row this counts, and how tall that row is. Files are numbered
-    /// from one everywhere a person will read the number, including in every
-    /// other tool that opens them.
-    ///
-    /// The height is asked for rather than taken from the row beside it: that
-    /// row is in another view, and a number an inch short of its row would put
-    /// every number below it beside the wrong one.
-    pub(super) fn show_row(&self) {
-        let imp = self.imp();
-        let Some(row) = self
-            .position()
-            .zip(imp.records.borrow().clone())
-            .and_then(|(position, records)| records.at(position))
-        else {
-            return;
-        };
-        imp.label
-            .set_size_request(-1, super::height_for_lines(&imp.label, row.lines()));
-
-        let number = row.number().to_string();
-        imp.label.set_text(&number);
-        // The label is inside this widget rather than being it, so the number
-        // would otherwise be something a screen reader could see but not say.
-        // The role says it is a row header; there is no word to add to that.
-        self.update_property(&[gtk::accessible::Property::Label(&number)]);
     }
 
     /// What a press on the number does: puts the keyboard at the start of that
@@ -165,7 +143,8 @@ impl Number {
                 gesture.set_state(gtk::EventSequenceState::Claimed);
                 number.go_to_row();
 
-                if let Some((x, y)) = point_in_view(number.upcast_ref(), x, y) {
+                let at = point_in(number.upcast_ref(), super::Gutter::static_type(), x, y);
+                if let Some((x, y)) = at {
                     number
                         .activate_action("win.row-menu", Some(&(x, y).to_variant()))
                         .unwrap_or_default();
