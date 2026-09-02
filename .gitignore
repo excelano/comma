@@ -1,3 +1,4 @@
 /builddir
 /target
 /src/config.rs
+/.flatpak-builder

@@ -1,0 +1,55 @@
+# Flatpak manifest for Comma.
+#
+# This is the development copy, built against the working tree. The one Flathub
+# builds lives in the flathub/com.excelano.Comma repository and differs in one
+# module source: it names a git tag where this names a directory. Keep the two
+# in step by hand; there is no tooling that does it.
+#
+#   flatpak-builder --user --install --force-clean \
+#       .flatpak-builder/build build-aux/flatpak/com.excelano.Comma.yaml
+#
+# Author: David M. Anderson
+# Built with AI assistance (Claude, Anthropic)
+
+id: com.excelano.Comma
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: comma
+
+# Rust 1.92 is the floor the GTK bindings set. The extension on the 24.08 branch
+# is 1.89 and cannot build this; the 25.08 branch, which is what GNOME 50 is
+# built on, is 1.98. That is the whole reason the runtime is 50 rather than 48.
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Comma opens files wherever they are, and delimited files are rarely in the
+  # home directory. The file that prompted the 0.1.13 fixes was on a USB disk
+  # under /media, which --filesystem=home does not reach and --filesystem=host
+  # does. An editor that cannot open the file you have is not an editor.
+  - --filesystem=host
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/comma/cargo
+    # The build has no network. Every crate is vendored into cargo-sources.json
+    # ahead of time, and this makes Cargo say so plainly rather than fail at a
+    # download it was never going to be allowed to make.
+    CARGO_NET_OFFLINE: 'true'
+
+modules:
+  - name: comma
+    buildsystem: meson
+    config-opts:
+      # Meson's release maps to Cargo's --release in build-aux/cargo-build.sh.
+      - -Dbuildtype=release
+    sources:
+      - type: dir
+        path: ../..
+      - cargo-sources.json

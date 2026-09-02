@@ -12,12 +12,13 @@ what is true of Comma and not of its siblings.
 | Version that reaches users | `meson.build` |
 | `apt-ship` argument | `comma` |
 | Packages per release | two, amd64 and arm64 |
-| Channels | apt only |
+| Channels | apt, and Flathub once it is accepted |
 
 **Comma is a desktop application**, which is what makes its loop the hand-cut
-one, and apt is the whole of its distribution. Flatpak is deferred rather than
-ruled out; when it arrives it is another channel beside this one rather than a
-replacement for it.
+one. apt and Flathub are both channels for it, and neither replaces the other:
+apt is what this machine and any Debian 13 or Ubuntu 25.04 box installs from,
+and Flathub is what reaches everything older than that, since a Flatpak carries
+its own GTK and so is not held to the 4.18 floor.
 
 **The version lives in four places and only one of them reaches users.**
 `meson.build` is authoritative: `build-aux/build-deb.sh` reads the version
@@ -65,3 +66,33 @@ the release page.
 source tree, `ninja -C builddir install`, into `~/.local/bin`, so shipping to
 apt does not refresh what you run. Install locally as well, or the version you
 are using stays behind the one you released.
+
+**Flathub is a second publish, and the tag does not trigger it.** The manifest
+Flathub builds lives in `flathub/com.excelano.Comma`, not here; the copy in
+`build-aux/flatpak/` is the development one and differs in a single module
+source, a directory where the published one names a tag and a commit. After the
+GitHub release is out, edit that repository's manifest to the new tag and its
+commit and push. The buildbot does the rest, and the build lands in Flathub's
+test repository first, where it can be installed and looked at before it is
+published.
+
+**What breaks this is `cargo-sources.json` going stale.** Flathub builds with no
+network, so every crate is listed with its checksum in
+`build-aux/flatpak/cargo-sources.json`, and a build whose `Cargo.lock` has moved
+past that file fails at a download it is not allowed to make. The `flatpak`
+workflow regenerates it on any branch that moves `Cargo.lock`, which covers the
+weekly Dependabot bump; the case it does not cover is a lock edited by hand and
+merged without CI. Check it before tagging:
+
+```sh
+python3 flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json
+git diff --stat build-aux/flatpak/cargo-sources.json
+```
+
+**Build it before submitting anything.** The runtimes are heavy but they are
+shared and they stay installed:
+
+```sh
+flatpak-builder --user --install --force-clean \
+    .flatpak-builder/build build-aux/flatpak/com.excelano.Comma.yaml
+```
