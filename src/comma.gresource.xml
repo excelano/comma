@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/com/excelano/Comma">
-    <file>gtk/window.ui</file>
+    <!-- Compiled from gtk/window.blp into the build tree beside it, so the
+         file on disk is window.ui and the alias is what puts it back under
+         gtk/ inside the bundle, where src/window.rs asks for it. -->
+    <file alias="gtk/window.ui">window.ui</file>
     <file>style.css</file>
   </gresource>
 </gresources>
