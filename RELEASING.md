@@ -100,10 +100,16 @@ python3 flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources
 git diff --stat build-aux/flatpak/cargo-sources.json
 ```
 
-**Building one locally**, when you want to look at it rather than ship it. The
-runtimes are heavy but they are shared and they stay installed:
+**Building one locally**, when you want to look at it rather than ship it. CI
+does this on every release, so nothing in the loop depends on being able to. The
+SDK and the Rust extension come to about four gigabytes and are not kept
+installed between releases, so they come back first:
 
 ```sh
+flatpak install --user -y flathub \
+    org.gnome.Platform//50 org.gnome.Sdk//50 \
+    org.freedesktop.Sdk.Extension.rust-stable//25.08
+
 flatpak-builder --user --install --force-clean \
     .flatpak-builder/build build-aux/flatpak/com.excelano.Comma.yaml
 ```
