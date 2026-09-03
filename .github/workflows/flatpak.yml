@@ -1,18 +1,18 @@
 name: flatpak
 
-# Flathub builds with no network, so every crate has to be named with its
-# checksum ahead of time in build-aux/flatpak/cargo-sources.json. That file is
-# generated from Cargo.lock and is stale the moment a dependency moves, which
-# here means the grouped Dependabot pull request every week. Regenerating it by
-# hand is a step nobody would remember, so this does it and commits the result
-# onto the branch that moved Cargo.lock.
+# Comma ships a Flatpak bundle beside its .deb packages. apt reaches Debian 13
+# and Ubuntu 25.04 and nothing older, because Comma is built against GTK 4.18
+# and no earlier release carries it; a Flatpak brings its own GTK and so runs
+# anywhere flatpak does. It is one file on the release page rather than a
+# repository, so there is nothing to host and nothing to prune, and there are no
+# updates either: a new version is a new download.
 #
-# A pull request from a fork cannot be pushed to, and this fails there rather
-# than pretending otherwise. Regenerate it locally in that case:
-#
-#   python3 flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json
+# Flathub is not a channel for Comma. Its inclusion policy disallows AI-assisted
+# code, and Comma's history says plainly that it was written with AI assistance.
 
 on:
+  release:
+    types: [published]
   pull_request:
     paths: ['Cargo.lock']
   push:
@@ -23,7 +23,18 @@ permissions:
   contents: write
 
 jobs:
+  # The bundle is built with no network, so every crate has to be named with its
+  # checksum in build-aux/flatpak/cargo-sources.json ahead of time. That file is
+  # stale the moment Cargo.lock moves, which here is the grouped Dependabot pull
+  # request every week, so this regenerates it and commits it onto the branch
+  # that moved the lock.
+  #
+  # A pull request from a fork cannot be pushed to, and this fails there rather
+  # than pretending otherwise. Regenerate it locally in that case:
+  #
+  #   python3 flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json
   cargo-sources:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       # The branch itself rather than the merge commit, because this pushes back.
@@ -34,9 +45,8 @@ jobs:
       - name: Install the generator's dependencies
         run: pip install aiohttp tomlkit
 
-      # Pinned to a commit rather than tracking master. This script decides
-      # which bytes go into a build that Flathub then signs and ships, so it is
-      # not something to fetch unread.
+      # Pinned to a commit rather than tracking master. This script decides which
+      # bytes go into a build, so it is not something to fetch unread.
       - name: Fetch the generator
         env:
           COMMIT: f03a673abe6ce189cea1c2857e2b44af2dd79d1f
@@ -60,3 +70,58 @@ jobs:
           git add build-aux/flatpak/cargo-sources.json
           git commit -m 'Regenerate the Flatpak cargo sources'
           git push
+
+  # One bundle per architecture, attached to the release the same way the .deb
+  # packages are. Publishing the release is what starts this, so a tag on its
+  # own produces nothing.
+  bundle:
+    if: github.event_name == 'release'
+    name: bundle (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install flatpak
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+
+      # The runtime is fetched fresh on every release rather than cached. This
+      # runs a few times a month, and a cache of several gigabytes that has to be
+      # invalidated when the runtime moves is more to get wrong than it saves.
+      - name: Install the runtime and the Rust extension
+        run: |
+          flatpak remote-add --user --if-not-exists \
+            flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.gnome.Platform//50 org.gnome.Sdk//50 \
+            org.freedesktop.Sdk.Extension.rust-stable//25.08
+
+      - name: Build
+        run: |
+          flatpak-builder --user --repo=repo --force-clean \
+            build build-aux/flatpak/com.excelano.Comma.yaml
+
+      # --runtime-repo writes Flathub's address into the bundle, so installing it
+      # on a machine with no remotes configured offers to add the one the GNOME
+      # runtime comes from rather than failing on a dependency it cannot find.
+      - name: Bundle
+        run: |
+          flatpak build-bundle repo comma-${{ matrix.arch }}.flatpak \
+            com.excelano.Comma \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ github.event.release.tag_name }}' \
+            comma-${{ matrix.arch }}.flatpak --clobber
