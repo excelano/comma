@@ -8,11 +8,11 @@ what is true of Comma and not of its siblings.
 | | |
 |---|---|
 | Loop | hand-cut |
-| Version lives in | `meson.build`, `Cargo.toml`, `Cargo.lock`, metainfo |
-| Version that reaches users | `meson.build` |
+| Version lives in | `meson.build` |
+| Version mirrored in | `Cargo.toml` `Cargo.lock` `data/com.excelano.Comma.metainfo.xml.in` |
 | `apt-ship` argument | `comma` |
-| Packages per release | two, amd64 and arm64 |
-| Channels | apt, and a Flatpak bundle on the release page |
+| Packages per release | 2, amd64 arm64 |
+| Store lanes | flatpak |
 
 **Comma is a desktop application**, which is what makes its loop the hand-cut
 one. apt is what this machine and any Debian 13 or Ubuntu 25.04 box installs
