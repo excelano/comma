@@ -36,11 +36,11 @@
   <url type="bugtracker">https://github.com/excelano/comma/issues</url>
   <url type="vcs-browser">https://github.com/excelano/comma</url>
 
-  <!-- Fetched by Flathub at build time and mirrored, so these have to stay
-       where they are. Taken at 1600x900 against a made-up order book, which is
-       the shape of file Comma is for: identifiers with leading zeros, part
-       numbers too long for a spreadsheet to leave alone, and dates that are
-       whatever the file says. -->
+  <!-- Fetched at build time by whatever shows the listing, so these have to
+       stay where they are. Taken at 1600x900 against a made-up order book,
+       which is the shape of file Comma is for: identifiers with leading zeros,
+       part numbers too long for a spreadsheet to leave alone, and dates that
+       are whatever the file says. -->
   <screenshots>
     <screenshot type="default">
       <caption>A delimited file as a grid, with every value left as the file wrote it</caption>
@@ -58,7 +58,7 @@
 
   <content_rating type="oars-1.1"/>
 
-  <!-- The wash GNOME Software and Flathub paint behind the icon. Both are
+  <!-- The wash GNOME Software paints behind the icon. Both are
        taken from the icon itself rather than from the brand sheet: the deep
        purple is the shade already in the mark, and the light one is that hue
        lifted until dark text sits on it comfortably. -->
