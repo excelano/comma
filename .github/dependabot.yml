@@ -1,17 +1,13 @@
+# Dependabot keeps this repository's GitHub Actions current, so a security fix
+# arrives as a pull request rather than slipping past. The bumps are grouped
+# into one pull request so they land together.
+#
+# Package versions are not Dependabot's work here. `ship` runs the language's
+# own update as a release step, which puts the decision at the moment the tree
+# is being looked at anyway, and keeps what a release ships current as of that
+# release. Security alerts are a separate switch and stay on.
 version: 2
-
-# One grouped pull request per ecosystem per week. Ungrouped updates each touch
-# Cargo.lock, so merging the first leaves every other one needing a rebase.
-
 updates:
-  - package-ecosystem: cargo
-    directory: /
-    schedule:
-      interval: monthly
-    groups:
-      cargo:
-        patterns: ['*']
-
   - package-ecosystem: github-actions
     directory: /
     schedule:
