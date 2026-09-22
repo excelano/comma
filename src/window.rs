@@ -956,8 +956,22 @@ impl CommaWindow {
     /// Draws the whole grid again from the document, for changes that moved
     /// columns or that moved rows too far to describe.
     fn reload(&self) {
-        self.imp().rows.reload();
+        let imp = self.imp();
+        imp.rows.reload();
+
+        // Rebuilding throws every column away and puts new ones up in its
+        // place, which drops the table to its left edge for the moment there
+        // are none. Left there, deleting a column while scrolled well across
+        // a wide file makes it look like every column has gone, rather than
+        // just the one asked for.
+        let across = imp.table.hadjustment().value();
         self.rebuild_columns();
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move || window.imp().table.hadjustment().set_value(across)
+        ));
+
         // A chip names its column, and a reload is the one moment that name can
         // have changed underneath it.
         self.show_filters();
