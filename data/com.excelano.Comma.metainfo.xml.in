@@ -73,6 +73,30 @@
   </recommends>
 
   <releases>
+    <release version="0.1.14" date="2026-09-21">
+      <description>
+        <ul>
+          <li>Keep the scroll position across a column rebuild</li>
+          <li>Package versions stop coming from Dependabot</li>
+          <li>Dependabot merges move to the organisation's sweep</li>
+          <li>Drop the Flatpak target</li>
+          <li>The profile is targets and names</li>
+          <li>Dependabot: monthly, grouped, merged when every run on the commit is green</li>
+          <li>Delete the release document: ship is the procedure</li>
+          <li>Stop pegging the support window to a major version</li>
+          <li>Regenerate the parameter block from ship.conf</li>
+          <li>Rename release.conf to ship.conf</li>
+          <li>release.conf: name the workflow that builds the packages</li>
+          <li>release.conf: name the product, not the repository</li>
+          <li>release.conf: say which architectures the packages are built for</li>
+          <li>Add release.conf, the parameter block a script can read</li>
+          <li>Say that the Flatpak SDKs are not kept installed</li>
+          <li>Ship the Flatpak as a bundle on the release page</li>
+          <li>Build Comma as a Flatpak, for Flathub</li>
+          <li>Compile the blueprint to a named file, so ninja can tell when it is stale</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.13" date="2026-08-26">
       <description>
         <p>
