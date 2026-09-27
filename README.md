@@ -71,5 +71,3 @@ Meson generates `src/config.rs` during configuration, so `cargo build` on its ow
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-Built with the assistance of Claude (Anthropic).
