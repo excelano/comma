@@ -7,9 +7,7 @@ name: CI
 # bindings ask for 1.92.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
