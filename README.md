@@ -6,9 +6,9 @@ Values are treated as text and never reinterpreted, so leading zeros survive, lo
 
 Comma took its inspiration from [Apostrophe](https://gitlab.gnome.org/World/apostrophe). Both are named for punctuation, and both edit files whose structure is invisible skeleton rather than content.
 
-## Status
+## What it does
 
-Released and in daily use. Comma opens a file from the command line, the file manager, or its own dialog, and guesses the two things a delimited file does not say about itself: which delimiter separates its fields, and whether its first row is column titles or data. Both guesses are shown under the header bar button that says how the file is being read, and both are one click from being corrected. Cells are editable, rows and columns can be inserted and deleted, everything can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
+Comma opens a file from the command line, the file manager, or its own dialog, and guesses the two things a delimited file does not say about itself: which delimiter separates its fields, and whether its first row is column titles or data. Both guesses are shown under the header bar button that says how the file is being read, and both are one click from being corrected. Cells are editable, rows and columns can be inserted and deleted, everything can be undone and redone, and saving a file you changed in one place changes that one line and nothing else.
 
 Clicking a column header puts the grid in that order without touching the file; one menu item writes that order down when you want it. Searching hides the rows nothing matched in, so what you are looking at before you replace is exactly what you are about to change.
 
@@ -16,11 +16,11 @@ A column can also be held to a condition of its own. Right-click its heading, or
 
 Export writes what the grid is showing as a PDF, a web page, or an OpenDocument spreadsheet. All three are output: they are never reopened, never offered as Save, and every value goes into them as text, so a leading zero is still a leading zero and a sixteen-digit account number is still itself.
 
-The keyboard reaches everything, the row numbers and column headings are handles for the operations that act on them, and both stay put as you scroll: the headings across the top, the numbers down the side. Comma speaks English and German. Still to come: nothing acts on more than one cell at a time.
+The keyboard reaches everything, the row numbers and column headings are handles for the operations that act on them, and both stay put as you scroll: the headings across the top, the numbers down the side. Comma speaks English and German. Nothing acts on more than one cell at a time.
 
 ## Installing
 
-Comma is built against GTK 4.18 and libadwaita 1.7, so it needs a distribution carrying both — Debian 13 or newer, or Ubuntu 25.04 or newer. Older releases are not a matter of rebuilding; the widgets are not there.
+Comma is built against the GTK 4 and libadwaita feature levels `Cargo.toml` names, so it needs a distribution carrying both. Older releases are not a matter of rebuilding; the widgets are not there.
 
 ### Debian and Ubuntu
 
@@ -47,7 +47,7 @@ sudo apt install meson ninja-build libgtk-4-dev libadwaita-1-dev \
     blueprint-compiler gettext libglib2.0-dev-bin desktop-file-utils appstream
 ```
 
-The Rust toolchain has to come from [rustup](https://rustup.rs) rather than from apt: the GTK bindings ask for Rust 1.92 and Debian 13 packages 1.85.
+The Rust toolchain comes from [rustup](https://rustup.rs) rather than from apt wherever the packaged `rustc` is older than the `rust-version` in `Cargo.toml`.
 
 Then configure, build, and install into your home prefix:
 
