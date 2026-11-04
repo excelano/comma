@@ -73,6 +73,19 @@
   </recommends>
 
   <releases>
+    <release version="0.1.15" date="2026-11-04">
+      <description>
+        <ul>
+          <li>zip 9.1: fixes GHSA-m665-v7pm-7grj (critical) and four high/medium advisories in archive reading</li>
+          <li>README: "What it does" instead of a status section, and the GTK and Rust floors read from Cargo.toml rather than quoted</li>
+          <li>Run CI by hand: workflow_dispatch instead of push and pull request</li>
+          <li>Remove ship.conf; the release apps read ship.toml</li>
+          <li>Retire the release workflows</li>
+          <li>Drop AI-assistance disclosure sentence from README/SECURITY footer</li>
+          <li>apt_repo, not apt_package</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.14" date="2026-09-21">
       <description>
         <ul>
