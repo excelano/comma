@@ -74,7 +74,9 @@ const ACTS: [Act; 4] = [
         CommaWindow::edit_cell,
     ),
     ("select-all", &["<primary>a"], CommaWindow::select_all),
-    ("clear-selection", &["Escape"], CommaWindow::clear_selection),
+    ("clear-selection", &["Escape"], |window| {
+        window.clear_selection() || window.close_search()
+    }),
     ("delete-rows", &["<primary>Delete"], |window| {
         WidgetExt::activate_action(window, "win.delete-row", Some(&AT_CURSOR.to_variant())).is_ok()
     }),
@@ -312,6 +314,22 @@ impl CommaWindow {
                 cursor.position.min(rows - 1),
                 cursor.column.min(columns - 1),
             );
+        });
+    }
+
+    pub(super) fn return_to_row(&self, cursor: Cursor) {
+        self.when_shown(move |window| {
+            let sorted = &window.imp().sorted;
+            let found = (0..sorted.n_items()).find(|at| {
+                sorted
+                    .item(*at)
+                    .and_downcast::<Row>()
+                    .is_some_and(|row| row.index() == cursor.row)
+            });
+            match found {
+                Some(position) => window.go_to(position, cursor.column),
+                None => window.follow_change(Some(cursor)),
+            }
         });
     }
 

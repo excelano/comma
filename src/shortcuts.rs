@@ -91,7 +91,7 @@ const GROUPS: [(&str, &[(&str, Key)]); 5] = [
             (translatable("Extend Down"), Key::Grid("extend-down")),
             (translatable("Select Every Row"), Key::Grid("select-all")),
             (
-                translatable("Clear the Selection"),
+                translatable("Clear the Selection or Close the Search"),
                 Key::Grid("clear-selection"),
             ),
             (

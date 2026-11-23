@@ -65,6 +65,19 @@ impl CommaWindow {
             ));
     }
 
+    pub(super) fn close_search(&self) -> bool {
+        let bar = &self.imp().search_bar;
+        if !bar.is_search_mode() {
+            return false;
+        }
+        let cursor = self.imp().current.get();
+        bar.set_search_mode(false);
+        if let Some(cursor) = cursor {
+            self.return_to_row(cursor);
+        }
+        true
+    }
+
     fn search_for(&self, needle: &str) {
         self.imp().needle.replace(needle.to_string());
 
