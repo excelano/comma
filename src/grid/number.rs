@@ -94,6 +94,12 @@ impl Number {
         self.imp().label.set_width_chars(digits);
     }
 
+    pub(super) fn show_width(&self, digits: i32) {
+        self.imp()
+            .label
+            .set_text(&"0".repeat(usize::try_from(digits).unwrap_or_default()));
+    }
+
     /// Says which row this counts, and whether the keyboard is on it.
     ///
     /// Files are numbered from one everywhere a person will read the number,

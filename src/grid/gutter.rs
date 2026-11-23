@@ -73,6 +73,7 @@ mod imp {
         /// file can show rather than to the ones on screen, so the gutter does
         /// not change width as you scroll.
         pub digits: Cell<i32>,
+        pub ruler: OnceCell<Number>,
         /// Which row of the view the keyboard is on, which is the one lit up.
         pub current: Cell<Option<u32>>,
     }
@@ -92,6 +93,11 @@ mod imp {
             let divider = gtk::Separator::new(gtk::Orientation::Vertical);
             divider.set_parent(&*self.obj());
             self.divider.replace(Some(divider));
+
+            let ruler = Number::new();
+            ruler.set_parent(&*self.obj());
+            ruler.set_child_visible(false);
+            let _ = self.ruler.set(ruler);
 
             self.obj().add_css_class("gutter");
             self.obj().connect_wheel();
@@ -211,6 +217,10 @@ impl Gutter {
         if self.imp().digits.replace(digits) == digits {
             return;
         }
+        if let Some(ruler) = self.imp().ruler.get() {
+            ruler.set_digits(digits);
+            ruler.show_width(digits);
+        }
         for number in self.imp().numbers.borrow().iter() {
             number.set_digits(digits);
         }
@@ -234,17 +244,10 @@ impl Gutter {
     /// from a real number rather than reckoned from the digit count, so it is
     /// the same answer the number will give when it is drawn.
     fn numbers_width(&self) -> i32 {
-        let numbers = self.imp().numbers.borrow();
-        let ruler = match numbers.first() {
-            Some(number) => number.clone(),
-            None => {
-                drop(numbers);
-                return self.grow_pool(1).map_or(0, |number| {
-                    number.measure(gtk::Orientation::Horizontal, -1).1
-                });
-            }
-        };
-        ruler.measure(gtk::Orientation::Horizontal, -1).1
+        self.imp()
+            .ruler
+            .get()
+            .map_or(0, |ruler| ruler.measure(gtk::Orientation::Horizontal, -1).1)
     }
 
     /// Puts a number against every row the table is drawing, and hides the ones
@@ -277,9 +280,7 @@ impl Gutter {
         }
     }
 
-    /// Makes sure there are at least this many numbers to hand, and gives back
-    /// the first of them.
-    fn grow_pool(&self, wanted: usize) -> Option<Number> {
+    fn grow_pool(&self, wanted: usize) {
         let mut numbers = self.imp().numbers.borrow_mut();
         while numbers.len() < wanted {
             let number = Number::new();
@@ -287,7 +288,6 @@ impl Gutter {
             number.set_parent(self);
             numbers.push(number);
         }
-        numbers.first().cloned()
     }
 
     /// The rows the table is drawing, in the order they are drawn.
