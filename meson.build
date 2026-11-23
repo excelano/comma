@@ -9,8 +9,8 @@ project(
 i18n = import('i18n')
 gnome = import('gnome')
 
-# The version is written twice: here, which is where the About dialog, the
-# AppStream metadata and the Debian package all read it from, and in Cargo.toml,
+# The version is written twice: here, which is where the About dialog and the
+# Debian package read it from, and in Cargo.toml,
 # which is where anyone looking at a Rust project would look first. Two places
 # drift, so configuring says so rather than letting a release go out disagreeing
 # with itself.

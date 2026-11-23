@@ -25,7 +25,7 @@ jobs:
           apt-get install -y --no-install-recommends \
             meson ninja-build libgtk-4-dev libadwaita-1-dev \
             blueprint-compiler gettext libglib2.0-dev-bin \
-            desktop-file-utils appstream
+            desktop-file-utils
 
       # The Rust image installs the minimal profile, which is the compiler and
       # Cargo and nothing else.
@@ -49,6 +49,6 @@ jobs:
       - name: Build
         run: ninja -C builddir
 
-      # The desktop entry, the AppStream metainfo, and the GSettings schema.
+      # The desktop entry and the GSettings schema.
       - name: Validate the installed data
         run: meson test -C builddir

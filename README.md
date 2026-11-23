@@ -40,11 +40,11 @@ Updates arrive with `apt upgrade` like any other package.
 
 ### From source
 
-Comma builds with Meson, which drives Cargo for the Rust compilation and handles the desktop entry, AppStream metadata, GSettings schema, icons, and translations. Build dependencies on Debian 13:
+Comma builds with Meson, which drives Cargo for the Rust compilation and handles the desktop entry, GSettings schema, icons, and translations. Build dependencies on Debian 13:
 
 ```sh
 sudo apt install meson ninja-build libgtk-4-dev libadwaita-1-dev \
-    blueprint-compiler gettext libglib2.0-dev-bin desktop-file-utils appstream
+    blueprint-compiler gettext libglib2.0-dev-bin desktop-file-utils
 ```
 
 The Rust toolchain comes from [rustup](https://rustup.rs) rather than from apt wherever the packaged `rustc` is older than the `rust-version` in `Cargo.toml`.
@@ -62,7 +62,7 @@ Run it with `~/.local/bin/comma`. Installing is not optional — Comma loads its
 
 ## Development
 
-`ninja -C builddir test` validates the desktop entry, the AppStream metainfo, and the GSettings schema; `cargo test` runs the rest.
+`ninja -C builddir test` validates the desktop entry and the GSettings schema; `cargo test` runs the rest.
 
 Meson generates `src/config.rs` during configuration, so `cargo build` on its own only works once `meson setup` has run at least once. Configuring also checks that `meson.build` and `Cargo.toml` agree about the version, because they each carry their own copy of it.
 
