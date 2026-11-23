@@ -117,6 +117,132 @@ fn a_line_ending_goes_with_the_line_it_belonged_to() {
 }
 
 #[test]
+fn deleting_several_rows_takes_those_lines_and_no_others() {
+    let mut document = load("plain.csv");
+
+    document.delete_rows(&[2, 0]);
+
+    assert_eq!(written(&document), "1,Ada,London\n");
+}
+
+#[test]
+fn deleting_several_rows_is_one_thing_to_undo() {
+    let original = read("plain.csv");
+    let mut document = load("plain.csv");
+
+    document.delete_rows(&[0, 2]);
+    document.undo();
+
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+    assert!(
+        !document.can_undo(),
+        "two rows went, but the user did one thing"
+    );
+}
+
+#[test]
+fn a_row_named_twice_is_deleted_once() {
+    let mut document = load("plain.csv");
+
+    document.delete_rows(&[1, 1]);
+
+    assert_eq!(document.row_count(), 2);
+    assert_eq!(written(&document), "id,name,city\n2,Grace,Arlington\n");
+}
+
+#[test]
+fn deleting_the_last_rows_leaves_the_file_ending_as_it_did() {
+    let mut document = load("no-trailing-newline.csv");
+    document.insert_row(document.row_count());
+    document.set_value(2, 0, "2");
+
+    document.delete_rows(&[1, 2]);
+
+    assert_eq!(
+        visible(&document.to_bytes()),
+        visible(b"id,name"),
+        "the file ended without a terminator and still should"
+    );
+}
+
+#[test]
+fn the_row_left_last_ends_the_file_even_when_it_was_not_next_to_the_last() {
+    let mut document = Document::from_bytes(b"a\nb\nc\nd", dialect("plain.csv")).unwrap();
+
+    let extent = document.delete_rows(&[3, 2]);
+
+    assert_eq!(visible(&document.to_bytes()), visible(b"a\nb"));
+    assert_eq!(
+        extent,
+        Extent::Rows {
+            at: 1,
+            gone: 3,
+            come: 1
+        }
+    );
+    document.undo();
+    assert_eq!(visible(&document.to_bytes()), visible(b"a\nb\nc\nd"));
+}
+
+#[test]
+fn deleting_rows_apart_says_it_spliced_from_the_first_to_the_last() {
+    let mut document = Document::from_bytes(b"a\nb\nc\nd\ne\n", dialect("plain.csv")).unwrap();
+
+    assert_eq!(
+        document.delete_rows(&[3, 1]),
+        Extent::Rows {
+            at: 1,
+            gone: 3,
+            come: 1
+        }
+    );
+    assert_eq!(written(&document), "a\nc\ne\n");
+}
+
+#[test]
+fn deleting_every_row_leaves_an_empty_file() {
+    let original = read("no-trailing-newline.csv");
+    let mut document = load("no-trailing-newline.csv");
+
+    document.delete_rows(&[0, 1]);
+
+    assert_eq!(document.row_count(), 0);
+    assert!(document.to_bytes().is_empty());
+    document.undo();
+    assert_eq!(visible(&document.to_bytes()), visible(&original));
+}
+
+#[test]
+fn rows_deleted_apart_come_back_and_go_again_with_undo_and_redo() {
+    let original = b"a\nb\nc\nd\ne";
+    let mut document = Document::from_bytes(original, dialect("plain.csv")).unwrap();
+
+    document.delete_rows(&[0, 2, 4]);
+    let deleted = document.to_bytes();
+    assert_eq!(visible(&deleted), visible(b"b\nd"));
+
+    assert_eq!(
+        document.undo(),
+        Some(Extent::Rows {
+            at: 0,
+            gone: 2,
+            come: 5
+        })
+    );
+    assert_eq!(visible(&document.to_bytes()), visible(original));
+
+    assert_eq!(
+        document.redo(),
+        Some(Extent::Rows {
+            at: 0,
+            gone: 5,
+            come: 2
+        })
+    );
+    assert_eq!(visible(&document.to_bytes()), visible(&deleted));
+}
+
+#[test]
 fn an_inserted_column_stops_at_the_records_that_do_not_reach_it() {
     let mut document = load("ragged.csv");
 
@@ -359,6 +485,14 @@ fn changes() -> Vec<Change> {
         ("a deleted first row", |document| document.delete_row(0)),
         ("a deleted last row", |document| {
             document.delete_row(document.row_count() - 1)
+        }),
+        ("every other row deleted", |document| {
+            let rows: Vec<usize> = (0..document.row_count()).step_by(2).collect();
+            document.delete_rows(&rows)
+        }),
+        ("the last two rows deleted", |document| {
+            let rows = document.row_count();
+            document.delete_rows(&[rows - 1, rows.saturating_sub(2)])
         }),
         ("an inserted first column", |document| {
             document.insert_column(0)

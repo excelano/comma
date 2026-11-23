@@ -17,6 +17,7 @@ mod filters;
 mod menus;
 mod place;
 mod recent;
+mod selection;
 mod showing;
 mod watch;
 
@@ -24,7 +25,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::gio;
 use gtk::glib;
 
@@ -87,6 +88,13 @@ struct Operation {
     /// thing in any order, and so do all the columns, which nothing here sorts
     /// or hides.
     needs_file_order: bool,
+    on_selection: Option<OnSelection>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OnSelection {
+    change: fn(&mut Document, &[usize]) -> Extent,
+    label: fn(u32) -> String,
 }
 
 const STRUCTURE: [Operation; 6] = [
@@ -97,6 +105,7 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, row| document.insert_row(row),
         needs_cell: false,
         needs_file_order: true,
+        on_selection: None,
     },
     Operation {
         name: "insert-row-below",
@@ -107,6 +116,7 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, row| document.insert_row((row + 1).min(document.row_count())),
         needs_cell: false,
         needs_file_order: true,
+        on_selection: None,
     },
     Operation {
         name: "delete-row",
@@ -115,6 +125,12 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, row| document.delete_row(row),
         needs_cell: true,
         needs_file_order: false,
+        on_selection: Some(OnSelection {
+            change: |document, rows| document.delete_rows(rows),
+            label: |rows| {
+                ngettext("Delete %d Row", "Delete %d Rows", rows).replace("%d", &rows.to_string())
+            },
+        }),
     },
     Operation {
         name: "insert-column-before",
@@ -123,6 +139,7 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, column| document.insert_column(column),
         needs_cell: true,
         needs_file_order: false,
+        on_selection: None,
     },
     Operation {
         name: "insert-column-after",
@@ -131,6 +148,7 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, column| document.insert_column(column + 1),
         needs_cell: true,
         needs_file_order: false,
+        on_selection: None,
     },
     Operation {
         name: "delete-column",
@@ -139,6 +157,7 @@ const STRUCTURE: [Operation; 6] = [
         change: |document, column| document.delete_column(column),
         needs_cell: true,
         needs_file_order: false,
+        on_selection: None,
     },
 ];
 
@@ -230,6 +249,8 @@ mod imp {
         /// it until they are asked to.
         pub shown: gtk::FilterListModel,
         pub sorted: gtk::SortListModel,
+        pub selection: gtk::MultiSelection,
+        pub anchor: Cell<Option<u32>>,
         /// What is being searched for. Empty means nothing is.
         pub needle: RefCell<String>,
         /// What each column is being held to, at most one condition apiece.
@@ -306,6 +327,8 @@ mod imp {
                 rows: RowModel::default(),
                 shown: gtk::FilterListModel::default(),
                 sorted: gtk::SortListModel::default(),
+                selection: gtk::MultiSelection::new(None::<gio::ListModel>),
+                anchor: Cell::default(),
                 needle: RefCell::default(),
                 filters: RefCell::default(),
                 file: RefCell::default(),
@@ -347,16 +370,15 @@ mod imp {
             window.bind_window_state();
             window.setup_actions();
 
-            // The grid shows every row and selects none: there is nothing yet
-            // that acts on a selected row, and a highlight would promise one.
             self.shown.set_model(Some(&self.rows));
             // A search runs over every cell of the file, so it is spread across
             // frames rather than done between one keystroke and the next.
             self.shown.set_incremental(true);
             self.sorted.set_model(Some(&self.shown));
             self.sorted.set_sorter(self.column_view.sorter().as_ref());
-            let model = gtk::NoSelection::new(Some(self.sorted.clone()));
-            self.column_view.set_model(Some(&model));
+            self.selection.set_model(Some(&self.sorted));
+            self.column_view.set_model(Some(&self.selection));
+            window.setup_selection();
             window.share_scrolling();
 
             // Which column the grid is sorted by decides whether there is an
@@ -370,7 +392,7 @@ mod imp {
                 ));
             }
 
-            self.menu_button.set_menu_model(Some(&primary_menu()));
+            self.menu_button.set_menu_model(Some(&primary_menu(0)));
             self.save_button.set_menu_model(Some(&save_menu()));
             self.dialect_button.set_menu_model(Some(&reading_menu()));
             // The banner offers one thing, and only when there is something to
@@ -532,7 +554,9 @@ impl CommaWindow {
         // are bound to the table; this is the same act named, which is what
         // anything driving Comma from outside has to have.
         let edit = gio::ActionEntry::builder("edit")
-            .activate(|window: &Self, _, _| window.edit_cell())
+            .activate(|window: &Self, _, _| {
+                window.edit_cell();
+            })
             .build();
 
         let reload = gio::ActionEntry::builder("reload")
@@ -564,6 +588,45 @@ impl CommaWindow {
                 if let Some((position, column)) = param.and_then(|at| at.get::<(u32, u32)>()) {
                     window.go_to(position, column as usize);
                 }
+            })
+            .build();
+
+        let select_row = gio::ActionEntry::builder("select-row")
+            .parameter_type(Some(glib::VariantTy::UINT32))
+            .activate(|window: &Self, _, param| {
+                if let Some(position) = param.and_then(|at| at.get::<u32>()) {
+                    window.select_row(position);
+                }
+            })
+            .build();
+
+        let select_to = gio::ActionEntry::builder("select-to")
+            .parameter_type(Some(glib::VariantTy::UINT32))
+            .activate(|window: &Self, _, param| {
+                if let Some(position) = param.and_then(|at| at.get::<u32>()) {
+                    window.select_to(position, 0);
+                }
+            })
+            .build();
+
+        let toggle_row = gio::ActionEntry::builder("toggle-row")
+            .parameter_type(Some(glib::VariantTy::UINT32))
+            .activate(|window: &Self, _, param| {
+                if let Some(position) = param.and_then(|at| at.get::<u32>()) {
+                    window.toggle_row(position);
+                }
+            })
+            .build();
+
+        let select_all = gio::ActionEntry::builder("select-all")
+            .activate(|window: &Self, _, _| {
+                window.select_all();
+            })
+            .build();
+
+        let clear_selection = gio::ActionEntry::builder("clear-selection")
+            .activate(|window: &Self, _, _| {
+                window.clear_selection();
             })
             .build();
 
@@ -652,6 +715,11 @@ impl CommaWindow {
             clear_filters,
             move_cursor,
             go_to,
+            select_row,
+            select_to,
+            toggle_row,
+            select_all,
+            clear_selection,
             cell_menu,
             row_menu,
             open_containing_folder,
@@ -1090,6 +1158,21 @@ impl CommaWindow {
         // The action stays reachable from the session bus whatever the menus
         // are showing, so what the menus refuse is refused here too.
         if operation.needs_file_order && !self.showing_file_order() {
+            return;
+        }
+
+        if let Some(on_selection) = operation.on_selection
+            && at == AT_CURSOR
+            && let Some((first, rows)) = self.selected_rows()
+        {
+            let was = self.imp().current.get().map(|cursor| Cursor {
+                position: first,
+                ..cursor
+            });
+            self.clear_selection();
+            let extent = (on_selection.change)(&mut document.borrow_mut(), &rows);
+            self.apply(extent);
+            self.follow_change(was);
             return;
         }
 

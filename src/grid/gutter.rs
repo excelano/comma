@@ -263,11 +263,22 @@ impl Gutter {
         let drawn = self.showing(&list);
         self.grow_pool(drawn.len());
         let current = self.imp().current.get();
+        let selection = self.view().and_then(|view| view.model());
+        let selected = |position| {
+            selection
+                .as_ref()
+                .is_some_and(|model| model.is_selected(position))
+        };
         let numbers = self.imp().numbers.borrow();
 
         for (number, row) in numbers.iter().zip(drawn.iter()) {
             number.set_child_visible(true);
-            number.show_row(row.position, row.row, current == Some(row.position));
+            number.show_row(
+                row.position,
+                row.row,
+                current == Some(row.position),
+                selected(row.position),
+            );
             number.allocate(
                 width,
                 row.height as i32,

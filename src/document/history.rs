@@ -57,6 +57,10 @@ pub(super) enum Change {
     /// way about, so a whole file's worth of rearranging costs one number per
     /// record rather than a second copy of the file.
     Order { order: Vec<usize> },
+    Many {
+        changes: Vec<Change>,
+        extent: Extent,
+    },
 }
 
 /// One record's fields as they were and as they are.
@@ -84,6 +88,23 @@ pub enum Extent {
     /// Enough moved that nothing can be assumed to be where it was, and no
     /// smaller description would be worth the reading.
     Shape,
+}
+
+impl Extent {
+    fn reversed(self) -> Self {
+        match self {
+            Self::Rows { at, gone, come } => Self::Rows {
+                at,
+                gone: come,
+                come: gone,
+            },
+            Self::Columns { at, inserted } => Self::Columns {
+                at,
+                inserted: !inserted,
+            },
+            Self::Record(_) | Self::Shape => self,
+        }
+    }
 }
 
 impl Change {
@@ -140,6 +161,19 @@ impl Change {
                 Extent::Columns {
                     at: *at,
                     inserted: *inserted == forward,
+                }
+            }
+            Self::Many { changes, extent } => {
+                if forward {
+                    for change in changes {
+                        change.apply(records, true);
+                    }
+                    *extent
+                } else {
+                    for change in changes.iter().rev() {
+                        change.apply(records, false);
+                    }
+                    extent.reversed()
                 }
             }
             Self::Order { order } => {
@@ -241,5 +275,40 @@ impl History {
     /// without recording a change that could be undone.
     pub(super) fn mark_unsaved(&mut self) {
         self.saved = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Change;
+    use crate::document::{Dialect, Document};
+
+    fn stored(change: &Change) -> usize {
+        match change {
+            Change::Rows { before, after, .. } => before.len() + after.len(),
+            Change::Many { changes, .. } => changes.iter().map(stored).sum(),
+            _ => 0,
+        }
+    }
+
+    #[test]
+    fn rows_deleted_far_apart_keep_only_themselves_for_undo() {
+        let text: String = (0..1000).map(|row| format!("{row}\n")).collect();
+        let mut document = Document::from_bytes(text.as_bytes(), Dialect::comma()).unwrap();
+
+        document.delete_rows(&[1, 500, 998]);
+
+        let change = document.history.changes.last().unwrap();
+        assert_eq!(stored(change), 3);
+    }
+
+    #[test]
+    fn the_row_left_last_is_all_that_is_kept_besides_the_deleted_ones() {
+        let mut document = Document::from_bytes(b"a\nb\nc\nd", Dialect::comma()).unwrap();
+
+        document.delete_rows(&[0, 3]);
+
+        let change = document.history.changes.last().unwrap();
+        assert_eq!(stored(change), 4, "two deleted, and row c before and after");
     }
 }

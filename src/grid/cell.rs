@@ -502,11 +502,13 @@ pub(super) fn setup(
         #[weak]
         cell,
         move |gesture, presses, _, _| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
             if let Some(item) = cell.parent() {
                 item.grab_focus();
             }
+            cell.activate_action("win.clear-selection", None)
+                .unwrap_or_default();
             if presses == 2 {
-                gesture.set_state(gtk::EventSequenceState::Claimed);
                 cell.begin();
             }
         }
@@ -524,6 +526,16 @@ pub(super) fn setup(
             gesture.set_state(gtk::EventSequenceState::Claimed);
             if let Some(item) = cell.parent() {
                 item.grab_focus();
+            }
+            let selected = cell
+                .imp()
+                .item
+                .borrow()
+                .upgrade()
+                .is_some_and(|item| item.is_selected());
+            if !selected {
+                cell.activate_action("win.clear-selection", None)
+                    .unwrap_or_default();
             }
             if let Some((x, y)) = super::point_in_view(cell.upcast_ref(), x, y) {
                 cell.activate_action("win.cell-menu", Some(&(x, y).to_variant()))

@@ -44,7 +44,8 @@ impl CommaWindow {
         let menu = self
             .imp()
             .cell_menu
-            .get_or_init(|| self.popover(&whole_menu(), &*self.imp().column_view));
+            .get_or_init(|| self.popover(&*self.imp().column_view));
+        menu.set_menu_model(Some(&whole_menu(self.selection_size())));
         point_at(menu, x, y);
     }
 
@@ -53,9 +54,8 @@ impl CommaWindow {
     /// already been moved there, which is what the items act on.
     pub(super) fn show_row_menu(&self, x: f64, y: f64) {
         let imp = self.imp();
-        let menu = imp
-            .row_menu
-            .get_or_init(|| self.popover(&section(Axis::Row, AT_CURSOR), &*imp.column_view));
+        let menu = imp.row_menu.get_or_init(|| self.popover(&*imp.column_view));
+        menu.set_menu_model(Some(&section(Axis::Row, AT_CURSOR, self.selection_size())));
         // Said in the gutter's coordinates, because that is what the number
         // pressed could measure itself against, and wanted in the table's,
         // because that is what the menu hangs off. The numbers are to the left
@@ -77,8 +77,8 @@ impl CommaWindow {
     /// one it hangs off, and both of these hang off the table. A row number is
     /// no longer inside a view of its own, so what it presses on has to be said
     /// in the table's coordinates before the menu is pointed at it.
-    fn popover(&self, model: &gio::Menu, at: &impl IsA<gtk::Widget>) -> gtk::PopoverMenu {
-        let menu = gtk::PopoverMenu::from_model(Some(model));
+    fn popover(&self, at: &impl IsA<gtk::Widget>) -> gtk::PopoverMenu {
+        let menu = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
         menu.set_has_arrow(false);
         menu.set_halign(gtk::Align::Start);
         menu.set_parent(at);
@@ -107,10 +107,14 @@ fn point_at(menu: &gtk::PopoverMenu, x: f64, y: f64) {
 
 /// The operations for one axis, each carrying what it is to act on: a row or a
 /// column, or `AT_CURSOR`, which means wherever the cursor is.
-fn section(axis: Axis, at: i32) -> gio::Menu {
+fn section(axis: Axis, at: i32, selected: u32) -> gio::Menu {
     let menu = gio::Menu::new();
     for operation in STRUCTURE.iter().filter(|operation| operation.axis == axis) {
-        let item = gio::MenuItem::new(Some(&gettext(operation.label)), None);
+        let label = match operation.on_selection {
+            Some(on_selection) if selected > 1 => (on_selection.label)(selected),
+            _ => gettext(operation.label),
+        };
+        let item = gio::MenuItem::new(Some(&label), None);
         item.set_action_and_target_value(
             Some(&format!("win.{}", operation.name)),
             Some(&at.to_variant()),
@@ -125,7 +129,7 @@ fn section(axis: Axis, at: i32) -> gio::Menu {
 /// A cell is the one place that can offer the fastest filter there is, because
 /// it is the only one holding a value: hold this column to what is written
 /// here, in one press and without typing it out again.
-fn whole_menu() -> gio::Menu {
+fn whole_menu(selected: u32) -> gio::Menu {
     let here = gio::Menu::new();
     here.append(
         Some(&gettext("Show Only Rows Like This One")),
@@ -133,8 +137,8 @@ fn whole_menu() -> gio::Menu {
     );
 
     let menu = gio::Menu::new();
-    menu.append_section(None, &section(Axis::Row, AT_CURSOR));
-    menu.append_section(None, &section(Axis::Column, AT_CURSOR));
+    menu.append_section(None, &section(Axis::Row, AT_CURSOR, selected));
+    menu.append_section(None, &section(Axis::Column, AT_CURSOR, 0));
     menu.append_section(None, &here);
     menu.append_section(None, &views(AT_CURSOR));
     menu
@@ -145,7 +149,7 @@ fn whole_menu() -> gio::Menu {
 /// move the cursor into it.
 pub(super) fn column_menu(column: usize) -> gio::Menu {
     let menu = gio::Menu::new();
-    menu.append_section(None, &section(Axis::Column, column as i32));
+    menu.append_section(None, &section(Axis::Column, column as i32, 0));
     menu.append_section(None, &views(column as i32));
     menu
 }
@@ -165,7 +169,7 @@ fn views(at: i32) -> gio::Menu {
 }
 
 /// The main menu, in the order it reads.
-pub(super) fn primary_menu() -> gio::Menu {
+pub(super) fn primary_menu(selected: u32) -> gio::Menu {
     let history = gio::Menu::new();
     history.append(Some(&gettext("_Undo")), Some("win.undo"));
     history.append(Some(&gettext("_Redo")), Some("win.redo"));
@@ -193,8 +197,8 @@ pub(super) fn primary_menu() -> gio::Menu {
 
     let menu = gio::Menu::new();
     menu.append_section(None, &history);
-    menu.append_section(None, &section(Axis::Row, AT_CURSOR));
-    menu.append_section(None, &section(Axis::Column, AT_CURSOR));
+    menu.append_section(None, &section(Axis::Row, AT_CURSOR, selected));
+    menu.append_section(None, &section(Axis::Column, AT_CURSOR, 0));
     menu.append_section(None, &views(AT_CURSOR));
     menu.append_section(None, &view);
     menu.append_section(None, &file);

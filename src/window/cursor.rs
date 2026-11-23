@@ -8,13 +8,15 @@
 // Author: David M. Anderson
 // Built with AI assistance (Claude, Anthropic)
 
+use std::rc::Rc;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
 
 use crate::grid::{self, Row};
 
-use super::CommaWindow;
+use super::{AT_CURSOR, CommaWindow};
 
 /// Where the keyboard is in the grid.
 ///
@@ -34,9 +36,11 @@ pub struct Cursor {
 /// These are bound to the grid rather than to the window, so that the arrow keys
 /// belong to the search box while the search box has the focus, and to the table
 /// the rest of the time. The same goes for `ACTS`.
-const MOVES: [(&str, &str); 10] = [
+const MOVES: [(&str, &str); 12] = [
     ("up", "Up"),
     ("down", "Down"),
+    ("extend-up", "<shift>Up"),
+    ("extend-down", "<shift>Down"),
     ("left", "Left"),
     ("right", "Right"),
     // Tab crosses the table and then wraps, as it does in a spreadsheet, and at
@@ -53,17 +57,28 @@ const MOVES: [(&str, &str); 10] = [
 /// One of the things the grid does where the keyboard already is: what it is
 /// called, every key that asks for it, and what it does. Carrying the last of
 /// those is what keeps asking for one by name and doing it a single list.
-type Act = (&'static str, &'static [&'static str], fn(&CommaWindow));
+type Act = (
+    &'static str,
+    &'static [&'static str],
+    fn(&CommaWindow) -> bool,
+);
 
 /// What the grid does instead of moving the keyboard.
 ///
 /// Opening a cell that is already open is what commits it, which is why Enter
 /// belongs here and not among the moves: it acts on where you are.
-const ACTS: [Act; 1] = [(
-    "edit",
-    &["Return", "KP_Enter", "F2"],
-    CommaWindow::edit_cell,
-)];
+const ACTS: [Act; 4] = [
+    (
+        "edit",
+        &["Return", "KP_Enter", "F2"],
+        CommaWindow::edit_cell,
+    ),
+    ("select-all", &["<primary>a"], CommaWindow::select_all),
+    ("clear-selection", &["Escape"], CommaWindow::clear_selection),
+    ("delete-rows", &["<primary>Delete"], |window| {
+        WidgetExt::activate_action(window, "win.delete-row", Some(&AT_CURSOR.to_variant())).is_ok()
+    }),
+];
 
 /// How many frames to keep looking for a cell the keyboard was sent to before
 /// giving up on it. A handful: the view draws the row it was scrolled to within
@@ -98,7 +113,10 @@ impl CommaWindow {
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
 
         for (how, key) in MOVES {
-            self.bind_key(&keys, key, move |window| window.move_cursor(how));
+            self.bind_key(&keys, key, move |window| {
+                window.move_cursor(how);
+                true
+            });
         }
         for (_, pressed, act) in ACTS {
             for key in pressed {
@@ -110,7 +128,12 @@ impl CommaWindow {
     }
 
     /// Binds one key to the grid, to do one thing.
-    fn bind_key(&self, keys: &gtk::ShortcutController, key: &str, run: impl Fn(&Self) + 'static) {
+    fn bind_key(
+        &self,
+        keys: &gtk::ShortcutController,
+        key: &str,
+        run: impl Fn(&Self) -> bool + 'static,
+    ) {
         let Some(trigger) = gtk::ShortcutTrigger::parse_string(key) else {
             return;
         };
@@ -123,10 +146,9 @@ impl CommaWindow {
             #[upgrade_or]
             glib::Propagation::Proceed,
             move |_, _| {
-                if window.typing() {
+                if window.typing() || !run(&window) {
                     return glib::Propagation::Proceed;
                 }
-                run(&window);
                 glib::Propagation::Stop
             }
         ));
@@ -237,6 +259,10 @@ impl CommaWindow {
         let (last_row, last_column) = (rows - 1, columns as usize - 1);
 
         let (position, column) = match how {
+            "extend-up" => return self.select_to(cursor.position.saturating_sub(1), cursor.column),
+            "extend-down" => {
+                return self.select_to((cursor.position + 1).min(last_row), cursor.column);
+            }
             "up" => (cursor.position.saturating_sub(1), cursor.column),
             "down" => ((cursor.position + 1).min(last_row), cursor.column),
             "left" => (cursor.position, cursor.column.saturating_sub(1)),
@@ -255,6 +281,7 @@ impl CommaWindow {
             _ => return,
         };
 
+        self.clear_selection();
         self.go_to(position, column);
     }
 
@@ -271,20 +298,45 @@ impl CommaWindow {
     /// of the file: after a delete that is whatever took the old row's place,
     /// which is where the next thing is likely to happen.
     pub(super) fn follow_change(&self, cursor: Option<Cursor>) {
-        let imp = self.imp();
         let Some(cursor) = cursor else {
             return;
         };
+        self.when_shown(move |window| {
+            let imp = window.imp();
+            let rows = imp.sorted.n_items();
+            let columns = imp.column_view.columns().n_items() as usize;
+            if rows == 0 || columns == 0 {
+                return;
+            }
+            window.go_to(
+                cursor.position.min(rows - 1),
+                cursor.column.min(columns - 1),
+            );
+        });
+    }
 
-        let rows = imp.sorted.n_items();
-        let columns = imp.column_view.columns().n_items() as usize;
-        if rows == 0 || columns == 0 {
-            return;
+    fn when_shown(&self, then: impl Fn(&Self) + 'static) {
+        let shown = &self.imp().shown;
+        if shown.pending() == 0 {
+            return then(self);
         }
-        self.go_to(
-            cursor.position.min(rows - 1),
-            cursor.column.min(columns - 1),
-        );
+        let waiting = Rc::new(std::cell::Cell::new(None));
+        let handler = shown.connect_pending_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[strong]
+            waiting,
+            move |shown| {
+                if shown.pending() > 0 {
+                    return;
+                }
+                if let Some(handler) = waiting.take() {
+                    shown.disconnect(handler);
+                }
+                then(&window);
+            }
+        ));
+        waiting.set(Some(handler));
     }
 
     /// Takes the keyboard out of the table, to the first thing in the window
@@ -437,10 +489,12 @@ impl CommaWindow {
     }
 
     /// Opens the cell the keyboard is on for typing.
-    pub(super) fn edit_cell(&self) {
-        if let Some(cell) = self.focused_cell() {
-            cell.begin();
-        }
+    pub(super) fn edit_cell(&self) -> bool {
+        let Some(cell) = self.focused_cell() else {
+            return false;
+        };
+        cell.begin();
+        true
     }
 
     /// The cell the keyboard is in, wherever inside it the focus has landed.

@@ -30,6 +30,11 @@ columnview row:focus-within,
   background-color: alpha(@accent_bg_color, 0.08);
 }
 
+columnview row:selected,
+.gutter .number.selected {
+  background-color: alpha(@accent_bg_color, 0.25);
+}
+
 /* The line under each number, matching the one under the row it names. The
  * numbers used to be rows of a column view and had these for nothing; they are
  * placed against the table's rows now and have to draw their own. What divides

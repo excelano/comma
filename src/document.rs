@@ -309,25 +309,69 @@ impl Document {
 
     /// Takes one record out of the file.
     pub fn delete_row(&mut self, at: usize) -> Extent {
-        // A file that ended without a terminator still should, so when the last
-        // record goes, the one that becomes last takes that over.
-        let displaces = at + 1 == self.records.len() && self.ends_without_terminator() && at > 0;
-        let (at, before, after) = if displaces {
-            let previous = self.records[at - 1].clone();
-            let unterminated = Record {
-                terminator: RecordTerminator::Absent,
-                ..previous.clone()
-            };
-            (
-                at - 1,
-                vec![previous, self.records[at].clone()],
-                vec![unterminated],
-            )
-        } else {
-            (at, vec![self.records[at].clone()], Vec::new())
-        };
+        self.delete_rows(&[at])
+    }
 
-        self.commit(Change::Rows { at, before, after })
+    pub fn delete_rows(&mut self, rows: &[usize]) -> Extent {
+        let mut rows = rows.to_vec();
+        rows.sort_unstable();
+        rows.dedup();
+        let (Some(&first), Some(&last)) = (rows.first(), rows.last()) else {
+            panic!("deleting rows has to name at least one");
+        };
+        assert!(
+            last < self.records.len(),
+            "row {last} is not in a file of {} rows",
+            self.records.len()
+        );
+
+        let new_last = (last + 1 == self.records.len() && self.ends_without_terminator())
+            .then(|| (0..last).rev().find(|row| rows.binary_search(row).is_err()))
+            .flatten();
+
+        let mut runs: Vec<(usize, usize)> = Vec::new();
+        for &row in &rows {
+            match runs.last_mut() {
+                Some((_, end)) if *end + 1 == row => *end = row,
+                _ => runs.push((row, row)),
+            }
+        }
+        if let (Some(kept), Some((start, _))) = (new_last, runs.last_mut()) {
+            *start = kept;
+        }
+
+        let mut changes: Vec<Change> = runs
+            .iter()
+            .rev()
+            .map(|&(start, end)| Change::Rows {
+                at: start,
+                before: self.records[start..=end].to_vec(),
+                after: new_last
+                    .filter(|&kept| kept == start)
+                    .map(|kept| Record {
+                        terminator: RecordTerminator::Absent,
+                        ..self.records[kept].clone()
+                    })
+                    .into_iter()
+                    .collect(),
+            })
+            .collect();
+        if changes.len() == 1
+            && let Some(change) = changes.pop()
+        {
+            return self.commit(change);
+        }
+
+        let at = new_last.map_or(first, |kept| kept.min(first));
+        let gone = last + 1 - at;
+        self.commit(Change::Many {
+            changes,
+            extent: Extent::Rows {
+                at,
+                gone,
+                come: gone - rows.len(),
+            },
+        })
     }
 
     /// Puts an empty field at `at` in every record that reaches that far.

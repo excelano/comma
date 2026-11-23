@@ -36,6 +36,7 @@ mod imp {
         /// number says. Kept apart from the position so that the text is only
         /// written when it changes.
         pub row: Value<Option<usize>>,
+        pub selected: Value<bool>,
     }
 
     #[glib::object_subclass]
@@ -107,7 +108,7 @@ impl Number {
     /// not its business any more: the gutter gives it the height of the row it
     /// is drawn against, which is the row's own height rather than a second
     /// calculation that has to agree with it.
-    pub(super) fn show_row(&self, position: u32, row: usize, current: bool) {
+    pub(super) fn show_row(&self, position: u32, row: usize, current: bool, selected: bool) {
         let imp = self.imp();
         imp.position.set(Some(position));
         if imp.row.replace(Some(row)) != Some(row) {
@@ -119,11 +120,14 @@ impl Number {
             self.update_property(&[gtk::accessible::Property::Label(&number)]);
         }
 
-        if current {
-            self.add_css_class("current");
-        } else {
-            self.remove_css_class("current");
+        for (class, on) in [("current", current), ("selected", selected)] {
+            if on {
+                self.add_css_class(class);
+            } else {
+                self.remove_css_class(class);
+            }
         }
+        imp.selected.set(selected);
     }
 
     /// What a press on the number does: puts the keyboard at the start of that
@@ -136,7 +140,17 @@ impl Number {
         clicks.connect_pressed(glib::clone!(
             #[weak(rename_to = number)]
             self,
-            move |_, _, _, _| number.go_to_row()
+            move |gesture, _, _, _| {
+                let held = gesture.current_event_state();
+                let how = if held.contains(gdk::ModifierType::SHIFT_MASK) {
+                    "win.select-to"
+                } else if held.contains(gdk::ModifierType::CONTROL_MASK) {
+                    "win.toggle-row"
+                } else {
+                    "win.select-row"
+                };
+                number.ask(how);
+            }
         ));
         self.add_controller(clicks);
 
@@ -147,7 +161,11 @@ impl Number {
             self,
             move |gesture, _, x, y| {
                 gesture.set_state(gtk::EventSequenceState::Claimed);
-                number.go_to_row();
+                if number.imp().selected.get() {
+                    number.go_to_row();
+                } else {
+                    number.ask("win.select-row");
+                }
 
                 let at = point_in(number.upcast_ref(), super::Gutter::static_type(), x, y);
                 if let Some((x, y)) = at {
@@ -169,6 +187,14 @@ impl Number {
             return;
         };
         self.activate_action("win.go-to", Some(&(position, 0u32).to_variant()))
+            .unwrap_or_default();
+    }
+
+    fn ask(&self, how: &str) {
+        let Some(position) = self.position() else {
+            return;
+        };
+        self.activate_action(how, Some(&position.to_variant()))
             .unwrap_or_default();
     }
 }
