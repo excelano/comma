@@ -13,9 +13,12 @@ use super::menus::primary_menu;
 impl CommaWindow {
     pub(super) fn setup_selection(&self) {
         let rows = gtk::SignalListItemFactory::new();
-        rows.connect_setup(|_, item| {
+        rows.connect_bind(|_, item| {
             if let Some(row) = item.downcast_ref::<gtk::ColumnViewRow>() {
-                row.set_selectable(false);
+                for on in [true, false] {
+                    row.set_selectable(on);
+                    row.set_activatable(on);
+                }
             }
         });
         self.imp().column_view.set_row_factory(Some(&rows));

@@ -502,13 +502,16 @@ pub(super) fn setup(
         #[weak]
         cell,
         move |gesture, presses, _, _| {
-            gesture.set_state(gtk::EventSequenceState::Claimed);
+            if cell.editing() {
+                return;
+            }
             if let Some(item) = cell.parent() {
                 item.grab_focus();
             }
             cell.activate_action("win.clear-selection", None)
                 .unwrap_or_default();
             if presses == 2 {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
                 cell.begin();
             }
         }
