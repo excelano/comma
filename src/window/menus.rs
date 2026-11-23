@@ -49,9 +49,6 @@ impl CommaWindow {
         point_at(menu, x, y);
     }
 
-    /// The same, for a right button pressed on a row number. A row number is
-    /// only on a row, so it offers only what a row can do — and the cursor has
-    /// already been moved there, which is what the items act on.
     pub(super) fn show_row_menu(&self, x: f64, y: f64) {
         let imp = self.imp();
         let menu = imp.row_menu.get_or_init(|| self.popover(&*imp.column_view));

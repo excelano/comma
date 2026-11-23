@@ -15,16 +15,6 @@
  * Built with AI assistance (Claude, Anthropic)
  */
 
-/* The row the keyboard is in. On a file wider than the window the cell ring can
- * be far from the row number that names it, and this is what ties the two back
- * together. It follows the focus on its own, so it promises nothing about
- * selection: there is no such thing here, and a row lit up by anything other
- * than where you are would say there was.
- *
- * The table lights its own row, because the cell holding the keyboard is inside
- * that row. Nothing the numbers hold has the focus, so the gutter is told which
- * one to light and says so with a class. One tint for the two of them: it is one
- * row. */
 columnview row:focus-within,
 .gutter .number.current {
   background-color: alpha(@accent_bg_color, 0.08);

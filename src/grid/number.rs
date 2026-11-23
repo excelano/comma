@@ -1,10 +1,5 @@
 // The number down the side of the table, and the handle for the row it counts.
 //
-// It is a widget of its own rather than a bare label because a handle has to
-// know which row it is: a press on it moves the keyboard there and the other
-// button asks what can be done to it, and a number that only had text in it
-// would have nothing to say by the time it was clicked.
-//
 // It is told where it is rather than asking, which is the other way round from
 // how this worked while the numbers were a view of their own. There is no view
 // now: the gutter puts a number against each row the table has drawn and says
@@ -130,10 +125,6 @@ impl Number {
         imp.selected.set(selected);
     }
 
-    /// What a press on the number does: puts the keyboard at the start of that
-    /// row, and on the other button asks what can be done to it. Both begin the
-    /// same way, because a menu whose items act on the cursor has to move the
-    /// cursor first.
     fn connect_gestures(&self) {
         let clicks = gtk::GestureClick::new();
         clicks.set_button(gdk::BUTTON_PRIMARY);

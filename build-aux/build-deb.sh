@@ -2,14 +2,6 @@
 #
 # Builds a Debian package.
 #
-# The fleet's CLIs are packaged by cargo-deb, which lists the files it ships in
-# Cargo.toml. That does not fit here: an installed Comma is a binary plus a
-# resource bundle, a desktop entry, AppStream metadata, a GSettings schema, two
-# icons, and a translation catalogue for every language, and Meson already knows
-# where every one of them goes. So this stages a normal `meson install` into a
-# directory and wraps that directory, rather than restating the install list in
-# a second place where the two could come to disagree.
-#
 # Nothing here compiles the schema, updates the icon cache, or rebuilds the
 # desktop database. Those are dpkg triggers on packages this one depends on, and
 # they run for every package that installs into the directories they watch.
