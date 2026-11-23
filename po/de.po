@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: comma\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 19:51-0500\n"
+"POT-Creation-Date: 2026-11-23 11:26-0600\n"
 "PO-Revision-Date: 2026-08-10 00:00+0000\n"
 "Last-Translator: David M. Anderson <david.anderson@excelano.com>\n"
 "Language-Team: German\n"
@@ -65,7 +65,125 @@ msgstr ""
 msgid "David M. Anderson"
 msgstr "David M. Anderson"
 
-#: data/com.excelano.Comma.metainfo.xml.in:44
+#: data/com.excelano.Comma.metainfo.xml.in:46
+msgid "A delimited file as a grid, with every value left as the file wrote it"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:50
+msgid "A column held to a condition, and a count of what is showing"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:54
+msgid "The same file on a dark desktop"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:79
+msgid ""
+"zip 9.1: fixes GHSA-m665-v7pm-7grj (critical) and four high/medium "
+"advisories in archive reading"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:80
+msgid ""
+"README: \"What it does\" instead of a status section, and the GTK and Rust "
+"floors read from Cargo.toml rather than quoted"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:81
+msgid "Run CI by hand: workflow_dispatch instead of push and pull request"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:82
+msgid "Remove ship.conf; the release apps read ship.toml"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:83
+msgid "Retire the release workflows"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:84
+msgid "Drop AI-assistance disclosure sentence from README/SECURITY footer"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:85
+msgid "apt_repo, not apt_package"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:92
+msgid "Keep the scroll position across a column rebuild"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:93
+msgid "Package versions stop coming from Dependabot"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:94
+msgid "Dependabot merges move to the organisation's sweep"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:95
+msgid "Drop the Flatpak target"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:96
+msgid "The profile is targets and names"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:97
+msgid ""
+"Dependabot: monthly, grouped, merged when every run on the commit is green"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:98
+msgid "Delete the release document: ship is the procedure"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:99
+msgid "Stop pegging the support window to a major version"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:100
+msgid "Regenerate the parameter block from ship.conf"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:101
+msgid "Rename release.conf to ship.conf"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:102
+msgid "release.conf: name the workflow that builds the packages"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:103
+msgid "release.conf: name the product, not the repository"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:104
+msgid "release.conf: say which architectures the packages are built for"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:105
+msgid "Add release.conf, the parameter block a script can read"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:106
+msgid "Say that the Flatpak SDKs are not kept installed"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:107
+msgid "Ship the Flatpak as a bundle on the release page"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:108
+msgid "Build Comma as a Flatpak, for Flathub"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:109
+msgid ""
+"Compile the blueprint to a named file, so ninja can tell when it is stale"
+msgstr ""
+
+#: data/com.excelano.Comma.metainfo.xml.in:115
 msgid ""
 "A file with line breaks inside its values no longer stops drawing. Scrolling "
 "down one could leave the window frozen with everything behind it still "
@@ -77,7 +195,7 @@ msgstr ""
 "alles dahinter weiterlief — bei jeder Datei, die lang genug zum Scrollen ist "
 "und deren Zeilen nicht alle gleich hoch sind."
 
-#: data/com.excelano.Comma.metainfo.xml.in:50
+#: data/com.excelano.Comma.metainfo.xml.in:121
 msgid ""
 "The number beside a row is that row's line in the file again. On those same "
 "files the numbers used to drift out of step with the rows the further you "
@@ -91,7 +209,7 @@ msgstr ""
 "mehrere Zeilen entfernt war. Sie werden jetzt an den Zeilen selbst "
 "ausgerichtet, statt getrennt gezählt zu werden."
 
-#: data/com.excelano.Comma.metainfo.xml.in:61
+#: data/com.excelano.Comma.metainfo.xml.in:132
 msgid ""
 "The last column can be made wider or narrower like every other one. Its "
 "right edge answers to a drag from either side of the line, where before it "
@@ -101,7 +219,7 @@ msgstr ""
 "ziehen. Ihre rechte Kante nimmt das Ziehen von beiden Seiten der Linie an; "
 "zuvor war sie die einzige Kante in der Tabelle, die auf nichts reagierte."
 
-#: data/com.excelano.Comma.metainfo.xml.in:66
+#: data/com.excelano.Comma.metainfo.xml.in:137
 msgid ""
 "Resizing a column no longer moves the keyboard. Taking hold of a column used "
 "to put the cursor on a cell, and the cursor is what decides which row or "
@@ -112,7 +230,7 @@ msgstr ""
 "steht, bestimmt, auf welche Zeile oder Spalte sich das nächste Einfügen oder "
 "Löschen bezieht. Sie bleibt nun dort, wo Sie sie gelassen haben."
 
-#: data/com.excelano.Comma.metainfo.xml.in:76
+#: data/com.excelano.Comma.metainfo.xml.in:147
 msgid ""
 "The files you have had open are a click away. The arrow beside Open lists "
 "them, newest first, with a box to search through them when the list is long. "
@@ -124,7 +242,7 @@ msgstr ""
 "den Fall, dass die Liste lang wird. Ein Klick darauf öffnet die Datei hier "
 "und fragt vorher nach, wenn im Fenster etwas nicht gespeichert ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:82
+#: data/com.excelano.Comma.metainfo.xml.in:153
 msgid ""
 "Comma also puts the files it opens into the desktop's own recent documents "
 "now, so a file edited here turns up in the Files sidebar and wherever else "
@@ -137,7 +255,7 @@ msgstr ""
 "Arbeitsumgebung auflistet, woran Sie gearbeitet haben. Wird unter einem "
 "neuen Namen gespeichert, wird auch dieser Name eingetragen."
 
-#: data/com.excelano.Comma.metainfo.xml.in:88
+#: data/com.excelano.Comma.metainfo.xml.in:159
 msgid ""
 "A file opened from a share or a server says which folder it is in, where "
 "before it said nothing."
@@ -145,7 +263,7 @@ msgstr ""
 "Eine von einer Freigabe oder einem Server geöffnete Datei zeigt jetzt an, in "
 "welchem Ordner sie liegt; vorher stand dort nichts."
 
-#: data/com.excelano.Comma.metainfo.xml.in:96
+#: data/com.excelano.Comma.metainfo.xml.in:167
 msgid ""
 "Comma can open a second window. A button at the left of the header bar, or "
 "Ctrl+N, gives you an empty one to open another file in, which until now took "
@@ -159,7 +277,7 @@ msgstr ""
 "genannt oder Comma zuvor beendet werden. Strg+W schließt das Fenster, in dem "
 "Sie sind, und fragt vorher nach, wenn darin etwas nicht gespeichert ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:103
+#: data/com.excelano.Comma.metainfo.xml.in:174
 msgid ""
 "Saving a file under another name, and writing one out as a PDF, a web page "
 "or a spreadsheet, have moved out of the main menu to the arrow beside the "
@@ -170,13 +288,13 @@ msgstr ""
 "neben der Schaltfläche »Speichern« gewandert, einen Klick von der "
 "Schaltfläche entfernt, zu der sie gehören."
 
-#: data/com.excelano.Comma.metainfo.xml.in:109
+#: data/com.excelano.Comma.metainfo.xml.in:180
 msgid "The exports no longer offer themselves on a window with no file open."
 msgstr ""
 "Die Ausgabeformate bieten sich nicht mehr in einem Fenster an, in dem keine "
 "Datei geöffnet ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:117
+#: data/com.excelano.Comma.metainfo.xml.in:188
 msgid ""
 "Comma now guesses whether the first row of a file is column titles or data, "
 "the way it already guessed the delimiter. A column of figures with a word "
@@ -188,7 +306,7 @@ msgstr ""
 "Spalte aus Zahlen mit einem Wort darüber trägt eine Überschrift; eine "
 "Spalte, die bis ganz nach oben aus Zahlen besteht, trägt keine."
 
-#: data/com.excelano.Comma.metainfo.xml.in:123
+#: data/com.excelano.Comma.metainfo.xml.in:194
 msgid ""
 "Both guesses sit under the header bar button that says how the file is being "
 "read, and both are one click from being corrected. Correcting this one "
@@ -201,7 +319,7 @@ msgstr ""
 "geändert, wird nur so lange erneut geraten, wie es noch eine Vermutung ist; "
 "eine Antwort, die Sie gegeben haben, wird nie überstimmt."
 
-#: data/com.excelano.Comma.metainfo.xml.in:134
+#: data/com.excelano.Comma.metainfo.xml.in:205
 msgid ""
 "Comma can now hand the file, or the folder it sits in, to something else. "
 "The primary menu opens the containing folder, or a terminal already standing "
@@ -211,7 +329,7 @@ msgstr ""
 "anderes übergeben. Das Hauptmenü öffnet den enthaltenden Ordner oder ein "
 "Terminal, das bereits darin steht, sodass kein Pfad abgetippt werden muss."
 
-#: data/com.excelano.Comma.metainfo.xml.in:139
+#: data/com.excelano.Comma.metainfo.xml.in:210
 msgid ""
 "It can also open the file in xled, xql or nved, each offered only when it is "
 "installed. Comma tells them what it has already worked out about the file — "
@@ -224,7 +342,7 @@ msgstr ""
 "und ob die erste Zeile eine Kopfzeile ist —, sodass das Werkzeug mit "
 "derselben Sicht auf die Datei startet, statt sie erneut zu ermitteln."
 
-#: data/com.excelano.Comma.metainfo.xml.in:146
+#: data/com.excelano.Comma.metainfo.xml.in:217
 msgid ""
 "A file with unsaved edits offers to save before it is handed over, since the "
 "tool reads what is on disk."
@@ -232,7 +350,7 @@ msgstr ""
 "Eine Datei mit ungespeicherten Änderungen bietet an, vor der Übergabe zu "
 "speichern, da das Werkzeug liest, was auf dem Datenträger steht."
 
-#: data/com.excelano.Comma.metainfo.xml.in:154
+#: data/com.excelano.Comma.metainfo.xml.in:225
 msgid ""
 "Comma now notices when something else writes the file it has open. If "
 "nothing is unsaved it reads the file again and says so; if there are edits "
@@ -244,7 +362,7 @@ msgstr ""
 "Änderungen zu verlieren oder ist eine Zelle zum Tippen geöffnet, meldet "
 "Comma, dass die Datei sich geändert hat, und wartet auf Anweisung."
 
-#: data/com.excelano.Comma.metainfo.xml.in:160
+#: data/com.excelano.Comma.metainfo.xml.in:231
 msgid ""
 "Saving over a file that has been written to since Comma read it now asks "
 "first, and offers to save this version somewhere else instead."
@@ -253,7 +371,7 @@ msgstr ""
 "hat, fragt jetzt zuerst nach und bietet an, diese Fassung stattdessen "
 "anderswo zu speichern."
 
-#: data/com.excelano.Comma.metainfo.xml.in:164
+#: data/com.excelano.Comma.metainfo.xml.in:235
 msgid ""
 "Reading the file again keeps the sorting, the column conditions, how far "
 "across the file you had scrolled and the row you were on."
@@ -262,7 +380,7 @@ msgstr ""
 "nach rechts Sie geblättert hatten und die Zeile, auf der Sie standen, "
 "erhalten."
 
-#: data/com.excelano.Comma.metainfo.xml.in:172
+#: data/com.excelano.Comma.metainfo.xml.in:243
 msgid ""
 "Fixes a fault that could make Comma stop responding after a cell had been "
 "opened for typing. Every version before this one is affected, so this is "
@@ -272,7 +390,7 @@ msgstr ""
 "eine Zelle zum Tippen geöffnet worden war. Alle früheren Versionen sind "
 "betroffen; ein Update lohnt sich daher."
 
-#: data/com.excelano.Comma.metainfo.xml.in:181
+#: data/com.excelano.Comma.metainfo.xml.in:252
 msgid ""
 "Clicking a row number now moves the keyboard there even in the moment after "
 "a filter or a search has changed what is showing, rather than quietly doing "
@@ -282,7 +400,7 @@ msgstr ""
 "wenn ein Filter oder eine Suche gerade verändert hat, was angezeigt wird, "
 "statt stillschweigend nichts zu tun."
 
-#: data/com.excelano.Comma.metainfo.xml.in:186
+#: data/com.excelano.Comma.metainfo.xml.in:257
 msgid ""
 "Tabbing through the window goes from the toolbar straight into the table. It "
 "used to stop at the row numbers, which answer to the mouse and had no key to "
@@ -292,7 +410,7 @@ msgstr ""
 "Bisher hielt sie bei den Zeilennummern an, die nur auf die Maus reagieren "
 "und keine Taste kennen."
 
-#: data/com.excelano.Comma.metainfo.xml.in:195
+#: data/com.excelano.Comma.metainfo.xml.in:266
 msgid ""
 "Any column can be held to a condition of its own. Right-click its heading "
 "and pick from nine: contains and does not contain, is and is not, is empty "
@@ -305,7 +423,7 @@ msgstr ""
 "und liegt zwischen. Mehrere Spalten können je eine tragen, und sie engen "
 "einander ein."
 
-#: data/com.excelano.Comma.metainfo.xml.in:202
+#: data/com.excelano.Comma.metainfo.xml.in:273
 msgid ""
 "Right-clicking a cell offers the shortest way in — hold this column to the "
 "value already written here. Numbers are read as numbers, so a price above "
@@ -316,7 +434,7 @@ msgstr ""
 "ein Preis über 100 weder eine leere Zelle noch einen in Pfund "
 "ausgezeichneten Preis zutage fördert."
 
-#: data/com.excelano.Comma.metainfo.xml.in:208
+#: data/com.excelano.Comma.metainfo.xml.in:279
 msgid ""
 "Every condition in force is spelled out on a bar under the toolbar with the "
 "button that removes it, and the title now says how many rows of how many are "
@@ -327,7 +445,7 @@ msgstr ""
 "sagt nun, wie viele Zeilen von wie vielen angezeigt werden — gleich ob ein "
 "Filter oder eine Suche die übrigen ausgelassen hat."
 
-#: data/com.excelano.Comma.metainfo.xml.in:218
+#: data/com.excelano.Comma.metainfo.xml.in:289
 msgid ""
 "Wide files draw faster. A file of forty-odd columns took about a second to "
 "put its table on the screen and now takes around half of that, because the "
@@ -340,7 +458,7 @@ msgstr ""
 "Textzeile einmal für das ganze Raster gemessen wird statt erneut für jede "
 "einzelne Zelle darin."
 
-#: data/com.excelano.Comma.metainfo.xml.in:224
+#: data/com.excelano.Comma.metainfo.xml.in:295
 msgid ""
 "Building Comma from source now gives you an optimised binary. Asking Meson "
 "for one had quietly been giving you the opposite."
@@ -348,7 +466,7 @@ msgstr ""
 "Wer Comma aus dem Quelltext baut, bekommt jetzt ein optimiertes Programm. "
 "Meson danach zu fragen hatte still das Gegenteil geliefert."
 
-#: data/com.excelano.Comma.metainfo.xml.in:232
+#: data/com.excelano.Comma.metainfo.xml.in:303
 msgid ""
 "The row numbers stay put when the grid is scrolled sideways, as the column "
 "headings already did, so the number naming a row is beside it however far "
@@ -358,7 +476,7 @@ msgstr ""
 "wie es die Spaltenüberschriften schon taten. So steht die Nummer einer Zeile "
 "neben ihr, wie weit man in einer breiten Datei auch nach rechts gegangen ist."
 
-#: data/com.excelano.Comma.metainfo.xml.in:237
+#: data/com.excelano.Comma.metainfo.xml.in:308
 msgid ""
 "A row inserted mid-file no longer misnumbers the rows below it, and an edit "
 "made to one of those rows is written to the row you typed into rather than "
@@ -368,7 +486,7 @@ msgstr ""
 "nicht mehr falsch, und eine Änderung an einer dieser Zeilen wird in die "
 "Zeile geschrieben, in die man getippt hat, statt in die darüber."
 
-#: data/com.excelano.Comma.metainfo.xml.in:246
+#: data/com.excelano.Comma.metainfo.xml.in:317
 msgid ""
 "Files open quickly. A cell now builds its editor when you type in it rather "
 "than when the grid is drawn, so a file of four thousand rows opens in a "
@@ -379,7 +497,7 @@ msgstr ""
 "eine Datei mit viertausend Zeilen in einem Augenblick statt in ein paar "
 "Sekunden, und eine breite Datei gewinnt am meisten."
 
-#: data/com.excelano.Comma.metainfo.xml.in:252
+#: data/com.excelano.Comma.metainfo.xml.in:323
 msgid ""
 "Inserting or deleting a row redraws that row rather than the whole grid, so "
 "the table stays where you had scrolled it to."
@@ -387,7 +505,7 @@ msgstr ""
 "Das Einfügen oder Löschen einer Zeile zeichnet diese Zeile neu statt des "
 "ganzen Rasters, sodass die Tabelle dort bleibt, wohin man gerollt hatte."
 
-#: data/com.excelano.Comma.metainfo.xml.in:260
+#: data/com.excelano.Comma.metainfo.xml.in:331
 msgid ""
 "The first release. Comma opens a delimited file, guesses its delimiter and "
 "says which one it guessed, and edits it as a grid. Rows and columns can be "
@@ -400,7 +518,7 @@ msgstr ""
 "sich rückgängig machen, und beim Speichern ändern sich nur die Zeilen, die "
 "man bearbeitet hat."
 
-#: data/com.excelano.Comma.metainfo.xml.in:266
+#: data/com.excelano.Comma.metainfo.xml.in:337
 msgid ""
 "Sorting and searching are views of the file rather than changes to it, and "
 "one menu item writes a sort order down when you want it. What the grid is "
@@ -428,7 +546,7 @@ msgstr ""
 "CSV-, TSV- und andere Textdateien mit Trennzeichen als Raster bearbeiten.\n"
 "Jede angegebene Datei wird in einem eigenen Fenster geöffnet."
 
-#: src/grid/cell.rs:564
+#: src/grid/cell.rs:576
 msgid "Empty"
 msgstr "Leer"
 
@@ -448,7 +566,7 @@ msgstr "Eine Datei öffnen"
 msgid "Search Recent Files"
 msgstr "Zuletzt verwendete Dateien durchsuchen"
 
-#: src/gtk/window.blp:79 src/window/files.rs:310 src/window/menus.rs:188
+#: src/gtk/window.blp:79 src/window/files.rs:310 src/window/menus.rs:192
 #: src/window/place.rs:176
 msgid "_Save"
 msgstr "_Speichern"
@@ -593,41 +711,72 @@ msgstr "Anfang der Datei"
 msgid "End of the File"
 msgstr "Ende der Datei"
 
-#: src/shortcuts.rs:118
+#: src/shortcuts.rs:88
+msgid "Selecting Rows"
+msgstr "Zeilen auswählen"
+
+#: src/shortcuts.rs:90
+msgid "Extend Up"
+msgstr "Auswahl nach oben erweitern"
+
+#: src/shortcuts.rs:91
+msgid "Extend Down"
+msgstr "Auswahl nach unten erweitern"
+
+#: src/shortcuts.rs:92
+msgid "Select Every Row"
+msgstr "Alle Zeilen auswählen"
+
+#: src/shortcuts.rs:94
+msgid "Clear the Selection or Close the Search"
+msgstr "Auswahl aufheben oder Suche schließen"
+
+#: src/shortcuts.rs:98
+msgid "Delete the Selected Rows"
+msgstr "Ausgewählte Zeilen löschen"
+
+#: src/shortcuts.rs:134
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: src/window.rs:95
+#: src/window.rs:103
 msgid "Insert Row Above"
 msgstr "Zeile darüber einfügen"
 
-#: src/window.rs:103
+#: src/window.rs:112
 msgid "Insert Row Below"
 msgstr "Zeile darunter einfügen"
 
-#: src/window.rs:113
+#: src/window.rs:123
 msgid "Delete Row"
 msgstr "Zeile löschen"
 
-#: src/window.rs:121
+#: src/window.rs:131
+#, c-format
+msgid "Delete %d Row"
+msgid_plural "Delete %d Rows"
+msgstr[0] "%d Zeile löschen"
+msgstr[1] "%d Zeilen löschen"
+
+#: src/window.rs:137
 msgid "Insert Column Before"
 msgstr "Spalte davor einfügen"
 
-#: src/window.rs:129
+#: src/window.rs:146
 msgid "Insert Column After"
 msgstr "Spalte danach einfügen"
 
-#: src/window.rs:137
+#: src/window.rs:155
 msgid "Delete Column"
 msgstr "Spalte löschen"
 
-#: src/window.rs:822
+#: src/window.rs:890
 msgid "Reloaded. Some filters were on columns the file no longer has."
 msgstr ""
 "Neu eingelesen. Einige Filter galten für Spalten, die die Datei nicht mehr "
 "hat."
 
-#: src/window.rs:1219
+#: src/window.rs:1316
 msgid "_Close"
 msgstr "S_chließen"
 
@@ -688,7 +837,7 @@ msgstr "Diese Datei hat sich auf dem Datenträger geändert"
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
-#: src/window/files.rs:241 src/window/menus.rs:217
+#: src/window/files.rs:241 src/window/menus.rs:221
 msgid "Save _As…"
 msgstr "Speichern _unter …"
 
@@ -716,7 +865,7 @@ msgstr "_Verwerfen"
 
 #. The section says Export so that the entries under it do not have to: what
 #. each one is called finishes the sentence this heading starts.
-#: src/window/files.rs:336 src/window/menus.rs:231
+#: src/window/files.rs:336 src/window/menus.rs:235
 msgid "Export"
 msgstr "Exportieren"
 
@@ -855,83 +1004,83 @@ msgstr "%c ist kleiner als %v"
 msgid "%c is between %v and %w"
 msgstr "%c liegt zwischen %v und %w"
 
-#: src/window/menus.rs:131
+#: src/window/menus.rs:135
 msgid "Show Only Rows Like This One"
 msgstr "Nur Zeilen wie diese anzeigen"
 
-#: src/window/menus.rs:161
+#: src/window/menus.rs:165
 msgid "_Filter This Column…"
 msgstr "Diese _Spalte filtern …"
 
-#: src/window/menus.rs:170
+#: src/window/menus.rs:174
 msgid "_Undo"
 msgstr "_Rückgängig"
 
-#: src/window/menus.rs:171
+#: src/window/menus.rs:175
 msgid "_Redo"
 msgstr "_Wiederholen"
 
-#: src/window/menus.rs:175
+#: src/window/menus.rs:179
 msgid "Apply This Order to the File"
 msgstr "Diese Reihenfolge auf die Datei anwenden"
 
-#: src/window/menus.rs:179
+#: src/window/menus.rs:183
 msgid "Clear All Filters"
 msgstr "Alle Filter entfernen"
 
-#: src/window/menus.rs:186
+#: src/window/menus.rs:190
 msgid "_Open…"
 msgstr "Ö_ffnen …"
 
-#: src/window/menus.rs:187 src/window/watch.rs:60
+#: src/window/menus.rs:191 src/window/watch.rs:60
 msgid "_Reload"
 msgstr "Neu _einlesen"
 
-#: src/window/menus.rs:191
+#: src/window/menus.rs:195
 msgid "_Keyboard Shortcuts"
 msgstr "_Tastenkürzel"
 
-#: src/window/menus.rs:192
+#: src/window/menus.rs:196
 msgid "_About Comma"
 msgstr "_Info zu Comma"
 
-#: src/window/menus.rs:240
+#: src/window/menus.rs:244
 msgid "Open Containing _Folder"
 msgstr "Enthaltenden _Ordner öffnen"
 
-#: src/window/menus.rs:245
+#: src/window/menus.rs:249
 msgid "Open in _Terminal"
 msgstr "Im _Terminal öffnen"
 
-#: src/window/menus.rs:280
+#: src/window/menus.rs:284
 msgid "First Row Is a Header"
 msgstr "Erste Zeile ist eine Kopfzeile"
 
-#: src/window/menus.rs:283
+#: src/window/menus.rs:287
 msgid "Delimiter"
 msgstr "Trennzeichen"
 
-#: src/window/menus.rs:311
+#: src/window/menus.rs:315
 msgctxt "delimiter"
 msgid "Comma"
 msgstr "Komma"
 
-#: src/window/menus.rs:312
+#: src/window/menus.rs:316
 msgctxt "delimiter"
 msgid "Tab"
 msgstr "Tabulator"
 
-#: src/window/menus.rs:313
+#: src/window/menus.rs:317
 msgctxt "delimiter"
 msgid "Semicolon"
 msgstr "Semikolon"
 
-#: src/window/menus.rs:314
+#: src/window/menus.rs:318
 msgctxt "delimiter"
 msgid "Pipe"
 msgstr "Senkrechter Strich"
 
-#: src/window/menus.rs:315
+#: src/window/menus.rs:319
 msgctxt "delimiter"
 msgid "ASCII Separators"
 msgstr "ASCII-Trennzeichen"
