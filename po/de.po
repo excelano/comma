@@ -1,5 +1,5 @@
 # German translation for Comma.
-# Copyright (C) 2026 Excelano LLC
+# Copyright (C) 2026 David M. Anderson
 # This file is distributed under the same licence as the Comma package.
 # David M. Anderson <david.anderson@excelano.com>, 2026.
 #

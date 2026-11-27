@@ -188,7 +188,7 @@ impl CommaApplication {
             .version(VERSION)
             .developer_name("David M. Anderson")
             .developers(vec!["David M. Anderson"])
-            .copyright("© 2026 Excelano LLC")
+            .copyright("© 2026 David M. Anderson")
             .license_type(gtk::License::MitX11)
             .website("https://github.com/excelano/comma")
             .issue_url("https://github.com/excelano/comma/issues")
